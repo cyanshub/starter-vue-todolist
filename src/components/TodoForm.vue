@@ -1,0 +1,318 @@
+<template>
+  <div class="modal-overlay" @click="closeModal">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h2>{{ isEditing ? '編輯待辦事項' : '新增待辦事項' }}</h2>
+        <button @click="$emit('close')" class="close-btn">✕</button>
+      </div>
+
+      <form @submit.prevent="handleSubmit" class="todo-form">
+        <div class="form-group">
+          <label for="name">標題 *</label>
+          <input id="name" v-model="form.name" type="text" required placeholder="輸入待辦事項標題" class="form-input" />
+        </div>
+
+        <div class="form-group">
+          <label for="content">內容描述 *</label>
+          <textarea
+            id="content"
+            v-model="form.content"
+            required
+            placeholder="詳細描述這個待辦事項"
+            rows="3"
+            class="form-textarea"
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="date">日期 *</label>
+            <input id="date" v-model="form.date" type="date" required class="form-input" />
+          </div>
+
+          <div class="form-group">
+            <label for="time">預估時間 (小時)</label>
+            <input id="time" v-model.number="form.time" type="number" min="0" step="0.5" placeholder="0.5" class="form-input" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="location">地點</label>
+          <input id="location" v-model="form.location" type="text" placeholder="例如：公司、家裡、公園" class="form-input" />
+        </div>
+
+        <div class="form-group">
+          <label for="remarks">備註</label>
+          <textarea id="remarks" v-model="form.remarks" placeholder="額外的提醒或備註" rows="2" class="form-textarea"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" @click="$emit('close')" class="btn btn-secondary">取消</button>
+          <button type="submit" class="btn btn-primary">
+            {{ isEditing ? '更新' : '新增' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'TodoForm',
+  props: {
+    todo: {
+      type: Object,
+      default: null
+    }
+  },
+  data() {
+    return {
+      form: {
+        name: '',
+        content: '',
+        date: '',
+        time: null,
+        location: '',
+        remarks: ''
+      }
+    }
+  },
+  computed: {
+    isEditing() {
+      return !!this.todo
+    }
+  },
+  watch: {
+    todo: {
+      handler(newTodo) {
+        if (newTodo) {
+          this.form = { ...newTodo }
+        } else {
+          this.resetForm()
+        }
+      },
+      immediate: true
+    }
+  },
+  methods: {
+    resetForm() {
+      this.form = {
+        name: '',
+        content: '',
+        date: new Date().toISOString().split('T')[0],
+        time: null,
+        location: '',
+        remarks: ''
+      }
+    },
+
+    handleSubmit() {
+      const todoData = {
+        name: (this.form.name || '').trim(),
+        content: (this.form.content || '').trim(),
+        date: this.form.date,
+        time: this.form.time || null,
+        location: (this.form.location || '').trim() || null,
+        remarks: (this.form.remarks || '').trim() || null
+      }
+
+      if (this.isEditing && this.todo) {
+        todoData.isCompleted = this.todo.isCompleted
+      }
+
+      this.$emit('save', todoData)
+    },
+
+    closeModal(event) {
+      if (event.target.classList.contains('modal-overlay')) {
+        this.$emit('close')
+      }
+    }
+  },
+
+  mounted() {
+    if (!this.todo) {
+      this.resetForm()
+    }
+  }
+}
+</script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #f8fbff 0%, #f0f8ff 100%);
+  border-radius: 20px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(135, 206, 235, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid rgba(135, 206, 235, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 20px 20px 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3rem;
+  background: linear-gradient(45deg, #87ceeb, #b0e0e6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #333;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(135, 206, 235, 0.1);
+}
+
+.todo-form {
+  padding: 25px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid rgba(135, 206, 235, 0.3);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #87ceeb;
+  box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: rgba(102, 102, 102, 0.5);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(135, 206, 235, 0.2);
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, #87ceeb, #b0e0e6);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(135, 206, 235, 0.3);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
+  border: 1px solid rgba(135, 206, 235, 0.3);
+}
+
+.btn-secondary:hover {
+  background: rgba(135, 206, 235, 0.1);
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+</style>

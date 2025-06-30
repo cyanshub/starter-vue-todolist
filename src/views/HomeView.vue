@@ -1,18 +1,27 @@
 <template>
   <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <p>Loading...</p>
   </div>
 </template>
 
 <script>
 // @ is an alias to /src
-import HelloWorld from '@/components/HelloWorld.vue'
 
 export default {
   name: 'HomeView',
   components: {
-    HelloWorld
+    // 定義使用到的組件
+  },
+  created () {
+    // 將路由導向 todos
+    this.$router.push('/todos')
   }
 }
 </script>
+
+<style scoped>
+.home {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e6f3ff 0%, #f0f8ff 100%);
+}
+</style>

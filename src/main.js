@@ -3,6 +3,11 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 
+import 'vue-awesome/icons'
+import Icon from 'vue-awesome/components/Icon.js'
+
+Vue.component('v-icon', Icon)
+
 Vue.config.productionTip = false
 
 // 在 Vue 2 中，使用 `Vue.use()` 来安装插件

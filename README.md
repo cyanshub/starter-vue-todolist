@@ -1,24 +1,133 @@
-# starter-vue-3-20250628
+# 待辦清單
 
-## Project setup
-```
+一個使用 Vue2 開發的待辦清單應用，具有完整的 CRUD 功能和模組化的架構設計。
+
+## 功能特色
+
+- **新增待辦事項** - 包含標題、內容、日期、時間、地點、備註
+- **瀏覽待辦清單** - 清晰展示所有待辦事項，按日期新到舊排序
+- **編輯待辦事項** - 隨時修改任何欄位
+- **刪除待辦事項** - 一鍵刪除不需要的項目
+- **完成狀態切換** - 點擊 checkbox 標記完成/未完成
+- **篩選功能** - 可篩選全部、待完成、已完成的項目
+- **統計資訊** - 顯示待完成、已完成、總計數量
+- **淡藍色清新風格** - 現代化的 UI 設計
+- **響應式設計** - 支援手機和桌面瀏覽
+
+## 技術棧
+
+- **Vue 2.6.14** - 前端框架
+- **Vuex 3.6.2** - 模組化狀態管理
+- **Vue Router 3.5.1** - 路由管理
+- **Vite** - 構建工具
+- **CSS3** - 樣式和動畫
+- **Vue Awesome** - 圖標庫
+
+## 安裝與運行
+
+### 安裝依賴
+
+```bash
 npm install
 ```
 
-### Compiles and hot-reloads for development
-```
+### 開發模式運行
+
+```bash
 npm run serve
 ```
 
-### Compiles and minifies for production
-```
+### 建置生產版本
+
+```bash
 npm run build
 ```
 
-### Lints and fixes files
+## 使用方式
+
+1. **新增待辦事項**：點擊「新增待辦」按鈕，填寫表單後儲存
+2. **編輯待辦事項**：點擊待辦項目旁的編輯圖標進行編輯
+3. **標記完成**：點擊 checkbox 來切換完成狀態
+4. **刪除待辦事項**：點擊刪除圖標刪除項目
+5. **篩選查看**：使用篩選按鈕查看不同狀態的待辦事項
+
+## 專案結構
+
 ```
-npm run lint
+src/
+├── components/
+│   └── TodoForm.vue      # 新增/編輯表單組件
+├── views/
+│   ├── HomeView.vue      # 首頁視圖
+│   └── TodoList.vue      # 主要待辦清單組件
+├── store/
+│   ├── index.js          # Vuex 主配置
+│   └── modules/
+│       └── todos/        # Todos 模組
+│           ├── index.js  # 模組入口
+│           ├── state.js  # 狀態定義
+│           ├── getters.js # 計算屬性
+│           ├── mutations.js # 同步修改
+│           └── actions.js   # 異步操作
+├── router/
+│   └── index.js          # 路由配置
+└── App.vue               # 根組件
 ```
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+## 架構特色
+
+### **模組化 Vuex Store**
+
+- **狀態分離**：將 todos 相關邏輯封裝到獨立模組
+- **命名空間**：使用 `namespaced: true` 避免命名衝突
+- **職責分離**：state、getters、mutations、actions 分別管理
+- **可擴展性**：易於添加新的功能模組
+
+### **組件設計**
+
+- **單一職責**：每個組件專注於特定功能
+- **可重用性**：TodoForm 組件支援新增和編輯模式
+- **響應式設計**：適配不同螢幕尺寸
+
+## 設計特色
+
+- **淡藍色主題**：粉藍色背景搭配天藍色漸層
+- **可愛元素**：使用圖標和圓潤設計
+- **玻璃擬態**：半透明背景和模糊效果
+- **漸層色彩**：天藍色到粉藍色的漸層按鈕
+- **動畫效果**：hover 和點擊的流暢動畫
+- **智能排序**：待辦事項按日期新到舊自動排序
+
+## 狀態管理
+
+### **Vuex 模組結構**
+
+```javascript
+// 使用命名空間訪問
+...mapGetters('todos', ['allTodos', 'completedTodos', 'pendingTodos'])
+...mapActions('todos', ['addTodo', 'updateTodo', 'deleteTodo', 'toggleTodo'])
+```
+
+### **數據流程**
+
+1. **Actions** - 處理異步操作和業務邏輯
+2. **Mutations** - 同步修改狀態
+3. **Getters** - 計算派生狀態
+4. **State** - 存儲原始數據
+
+## 未來規劃
+
+- [ ] 資料持久化（LocalStorage）
+- [ ] 後端 API 整合
+- [ ] 使用者認證
+- [ ] 待辦事項分類
+- [ ] 搜尋功能
+- [ ] 匯出功能
+- [ ] 拖拽排序
+- [ ] 批量操作
+
+---
+
+**開發者**：Chin-Yang, Huang  
+**版本**：2.0.0  
+**授權**：MIT
