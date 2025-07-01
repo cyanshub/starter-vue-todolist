@@ -200,7 +200,7 @@ export default {
 .header-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 5px;
   align-items: flex-start;
   text-align: left;
 }
@@ -232,7 +232,7 @@ export default {
 }
 
 .tips {
-  margin-top: 5px;
+  margin-top: 2px;
 }
 
 .tips p {
@@ -547,18 +547,19 @@ export default {
   }
 
   .todo-header-row {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     gap: 10px;
   }
 
   .todo-title {
-    width: 100%;
-    justify-content: space-between;
+    flex: 1;
+    justify-content: flex-start;
+    gap: 8px;
   }
 
   .todo-actions {
-    align-self: flex-end;
+    flex-shrink: 0;
   }
 
   .todo-details {

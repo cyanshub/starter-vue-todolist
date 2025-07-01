@@ -65,7 +65,7 @@ export default {
       default: null
     }
   },
-  data() {
+  data () {
     return {
       form: {
         name: '',
@@ -78,13 +78,13 @@ export default {
     }
   },
   computed: {
-    isEditing() {
+    isEditing () {
       return !!this.todo
     }
   },
   watch: {
     todo: {
-      handler(newTodo) {
+      handler (newTodo) {
         if (newTodo) {
           this.form = { ...newTodo }
         } else {
@@ -95,7 +95,7 @@ export default {
     }
   },
   methods: {
-    resetForm() {
+    resetForm () {
       this.form = {
         name: '',
         content: '',
@@ -106,7 +106,7 @@ export default {
       }
     },
 
-    handleSubmit() {
+    handleSubmit () {
       const todoData = {
         name: (this.form.name || '').trim(),
         content: (this.form.content || '').trim() || null,
@@ -123,14 +123,14 @@ export default {
       this.$emit('save', todoData)
     },
 
-    closeModal(event) {
+    closeModal (event) {
       if (event.target.classList.contains('modal-overlay')) {
         this.$emit('close')
       }
     }
   },
 
-  mounted() {
+  mounted () {
     if (!this.todo) {
       this.resetForm()
     }
