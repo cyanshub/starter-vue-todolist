@@ -16,5 +16,9 @@ export default {
   },
   toggleTodo ({ commit }, id) {
     commit('TOGGLE_TODO', id)
+  },
+  // 清除所有資料並重置為 dummy data
+  clearAllData ({ commit }) {
+    commit('CLEAR_ALL_DATA')
   }
 }

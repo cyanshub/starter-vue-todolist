@@ -1,8 +1,15 @@
 <template>
   <div class="todo-list">
     <div class="todo-header">
-      <h1>我的待辦清單</h1>
-      <button @click="showAddForm = true" class="add-btn"><span>➕</span> 新增待辦</button>
+      <div class="header-content">
+        <h1>我的待辦清單</h1>
+        <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
+        <div class="tips">
+          <p>✨ 被新增的待辦事項會被保存在本地的設備端</p>
+          <p>✨ 點選重置資料將清空本地資料並恢復 Demo 模式</p>
+        </div>
+      </div>
+      <button @click="showAddForm = true" class="add-btn"><span>➕</span> 新增待辦事項</button>
     </div>
 
     <!-- 統計資訊 -->
@@ -125,7 +132,7 @@ export default {
     // 如果是模組化的情況
     // 則需要在第一個參數指定模組名稱
     // 第二個參數則是 actions 方法陣列
-    ...mapActions('todos', ['addTodo', 'updateTodo', 'deleteTodo', 'toggleTodo']),
+    ...mapActions('todos', ['addTodo', 'updateTodo', 'deleteTodo', 'toggleTodo', 'clearAllData']),
 
     // 開啟編輯模式
     editTodo (todo) {
@@ -157,6 +164,13 @@ export default {
       if (confirm('確定要刪除這個待辦事項嗎？')) {
         this.deleteTodo(id)
       }
+    },
+
+    // 重置資料
+    handleResetData () {
+      if (confirm('確定要重置所有資料嗎？這將會清除所有自訂的待辦事項並恢復為範例資料。')) {
+        this.clearAllData()
+      }
     }
   }
 }
@@ -174,13 +188,21 @@ export default {
 .todo-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 30px;
   padding: 20px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 15px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(136, 184, 136, 0.2);
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .todo-header h1 {
@@ -190,6 +212,34 @@ export default {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.reset-btn {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 5px 0;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  color: #666;
+  margin-left: 0;
+  align-self: flex-start;
+}
+
+.reset-btn:hover {
+  background: rgba(255, 193, 7, 0.2);
+}
+
+.tips {
+  margin-top: 5px;
+}
+
+.tips p {
+  margin: 2px 0;
+  font-size: 0.8rem;
+  color: #888;
+  line-height: 1.4;
 }
 
 .add-btn {
@@ -204,6 +254,8 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 0;
+  align-self: flex-start;
 }
 
 .add-btn:hover {
@@ -446,27 +498,89 @@ export default {
 }
 
 @media (max-width: 768px) {
+  .todo-list {
+    padding: 15px;
+  }
+
   .todo-header {
     flex-direction: column;
-    gap: 20px;
-    text-align: center;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .header-content {
+    align-items: flex-start;
+    text-align: left;
   }
 
   .todo-header h1 {
     font-size: 1.5rem;
   }
 
+  .add-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 15px 24px;
+  }
+
   .stats {
     flex-direction: column;
+    gap: 15px;
+  }
+
+  .stat-item {
+    padding: 15px;
   }
 
   .filter-tabs {
     flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .todo-item {
+    padding: 15px;
+  }
+
+  .todo-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .todo-title {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .todo-actions {
+    align-self: flex-end;
   }
 
   .todo-details {
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .detail-item {
+    font-size: 0.85rem;
+  }
+
+  .todo-remarks {
+    font-size: 0.85rem;
+    padding: 8px;
+  }
+
+  .empty-state {
+    padding: 40px 15px;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
   }
 }
 </style>
