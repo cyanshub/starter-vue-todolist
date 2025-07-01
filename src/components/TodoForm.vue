@@ -13,12 +13,11 @@
         </div>
 
         <div class="form-group">
-          <label for="content">內容描述 *</label>
+          <label for="content">內容描述</label>
           <textarea
             id="content"
             v-model="form.content"
-            required
-            placeholder="詳細描述這個待辦事項"
+            placeholder="詳細描述這個待辦事項（可選）"
             rows="3"
             class="form-textarea"
           ></textarea>
@@ -38,7 +37,7 @@
 
         <div class="form-group">
           <label for="location">地點</label>
-          <input id="location" v-model="form.location" type="text" placeholder="例如：公司、家裡、公園" class="form-input" />
+          <input id="location" v-model="form.location" type="text" placeholder="要在哪裡做這件事?" class="form-input" />
         </div>
 
         <div class="form-group">
@@ -110,7 +109,7 @@ export default {
     handleSubmit() {
       const todoData = {
         name: (this.form.name || '').trim(),
-        content: (this.form.content || '').trim(),
+        content: (this.form.content || '').trim() || null,
         date: this.form.date,
         time: this.form.time || null,
         location: (this.form.location || '').trim() || null,

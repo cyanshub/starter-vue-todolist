@@ -24,17 +24,6 @@ const todosDummy = [
   },
   {
     id: 993,
-    name: '讀書時間：讀完《原子習慣》',
-    content: '閱讀第 5-7 章，重點是習慣養成的方法',
-    remarks: '準備便利貼做重點標記',
-    time: 1,
-    date: '2024-08-31',
-    location: '咖啡廳',
-    creator: 'Chin-Yang, Huang',
-    isCompleted: false
-  },
-  {
-    id: 994,
     name: '音樂時間：練習爵士鼓',
     content: '練習基本的鼓點節奏',
     remarks: '記得預約樂器行教室，帶鼓棒',
@@ -58,8 +47,14 @@ const loadTodosFromStorage = () => {
 
       // 檢查是否有資料且不是空陣列
       if (Array.isArray(parsedTodos) && parsedTodos.length > 0) {
+        // 確保 id 是數字類型
+        const normalizedTodos = parsedTodos.map((todo) => ({
+          ...todo,
+          id: parseInt(todo.id)
+        }))
+
         return {
-          todos: parsedTodos,
+          todos: normalizedTodos,
           nextId: parseInt(storedNextId)
         }
       } else {
