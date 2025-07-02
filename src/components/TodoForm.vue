@@ -30,19 +30,19 @@
           </div>
 
           <div class="form-group">
-            <label for="time">預估時間 (小時)</label>
-            <input id="time" v-model.number="form.time" type="number" min="0" step="0.5" placeholder="0.5" class="form-input" />
+            <label for="time">需要時間 [hr]</label>
+            <input id="time" v-model.number="form.time" type="number" min="0" step="0.5" placeholder="時間接受小數點 (可選)" class="form-input" />
           </div>
         </div>
 
         <div class="form-group">
           <label for="location">地點</label>
-          <input id="location" v-model="form.location" type="text" placeholder="要在哪裡做這件事?" class="form-input" />
+          <input id="location" v-model="form.location" type="text" placeholder="要在哪裡做這件事?（可選）" class="form-input" />
         </div>
 
         <div class="form-group">
           <label for="remarks">備註</label>
-          <textarea id="remarks" v-model="form.remarks" placeholder="額外的提醒或備註" rows="2" class="form-textarea"></textarea>
+          <textarea id="remarks" v-model="form.remarks" placeholder="額外的提醒或備註（可選）" rows="2" class="form-textarea"></textarea>
         </div>
 
         <div class="form-actions">
@@ -71,7 +71,7 @@ export default {
         name: '',
         content: '',
         date: '',
-        time: null,
+        time: '1',
         location: '',
         remarks: ''
       }
@@ -100,7 +100,7 @@ export default {
         name: '',
         content: '',
         date: new Date().toISOString().split('T')[0],
-        time: null,
+        time: '1',
         location: '',
         remarks: ''
       }
