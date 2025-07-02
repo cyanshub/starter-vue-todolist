@@ -46,8 +46,8 @@
         </div>
 
         <div class="form-actions">
-          <button type="button" @click="$emit('close')" class="btn btn-secondary">取消</button>
-          <button type="submit" class="btn btn-primary">
+          <button type="button" @click="$emit('close')" class="btn btn-secondary btn-cancel">取消</button>
+          <button type="submit" class="btn btn-primary btn-submit">
             {{ isEditing ? '更新' : '新增' }}
           </button>
         </div>
@@ -296,6 +296,14 @@ export default {
   background: rgba(135, 206, 235, 0.1);
 }
 
+/* 桌面預設順序 */
+.btn-submit {
+  order: 2;
+}
+.btn-cancel {
+  order: 1;
+}
+
 @media (max-width: 768px) {
   .modal-content {
     width: 95%;
@@ -312,6 +320,14 @@ export default {
 
   .btn {
     width: 100%;
+  }
+
+  .btn-submit {
+    order: 1;
+  }
+
+  .btn-cancel {
+    order: 2;
   }
 }
 </style>
