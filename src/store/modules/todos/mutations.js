@@ -1,4 +1,5 @@
 import Vue from 'vue'
+import { todosDummy } from './dummy.js' // Dummy data 用於重置
 
 // 保存資料到 localStorage 的輔助函數
 const saveToLocalStorage = (todos, nextId) => {
@@ -12,43 +13,6 @@ const saveToLocalStorage = (todos, nextId) => {
     console.error('保存到 localStorage 失敗:', error)
   }
 }
-
-// Dummy data 用於重置
-const todosDummy = [
-  {
-    id: 991,
-    name: '範例: 記得運動 30 分鐘',
-    content: '去公園慢跑',
-    remarks: '記得帶水',
-    time: 0.5,
-    date: '2024-08-31',
-    location: '公園',
-    creator: 'Chin-Yang, Huang',
-    isCompleted: true
-  },
-  {
-    id: 992,
-    name: '範例: 整理專案筆記',
-    content: '整理 Node/Express 專案',
-    remarks: null,
-    time: 1,
-    date: '2024-08-31',
-    location: null,
-    creator: 'Chin-Yang, Huang',
-    isCompleted: false
-  },
-  {
-    id: 993,
-    name: '範例: 學習樂器',
-    content: '練習演奏爵士鼓',
-    remarks: '記得預約樂器行教室',
-    time: 1,
-    date: '2024-08-31',
-    location: '樂器行',
-    creator: 'Chin-Yang, Huang',
-    isCompleted: false
-  }
-]
 
 export default {
   ADD_TODO (state, todo) {
