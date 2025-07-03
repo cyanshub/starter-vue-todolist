@@ -3,7 +3,10 @@
     <div class="todo-header">
       <div class="header-content">
         <h1>我的待辦清單</h1>
-        <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
+        <div class="header-buttons">
+          <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
+          <button @click="handleExportExcel" class="export-btn"><v-icon name="download" scale="1" /> 匯出 Excel</button>
+        </div>
         <div class="tips">
           <p>✨ 被新增的待辦事項會被保存在本地的設備端</p>
           <p>✨ 點選重置資料將清空本地資料並恢復 Demo 模式</p>
@@ -93,6 +96,7 @@
 <script>
 import { mapGetters, mapActions } from 'vuex'
 import TodoForm from '../components/TodoForm.vue'
+import * as XLSX from 'xlsx'
 
 export default {
   name: 'TodoList',
@@ -115,14 +119,20 @@ export default {
 
     // 根據篩選條件回傳對應的待辦清單
     filteredTodos () {
+      let todos
       switch (this.currentFilter) {
         case 'completed':
-          return this.completedTodos
+          todos = this.completedTodos
+          break
         case 'pending':
-          return this.pendingTodos
+          todos = this.pendingTodos
+          break
         default:
-          return this.allTodos
+          todos = this.allTodos
       }
+
+      // 按照 ID 排序：ID 愈大的排在愈前面
+      return todos.sort((a, b) => b.id - a.id)
     }
   },
   methods: {
@@ -171,6 +181,63 @@ export default {
       if (confirm('確定要重置所有資料嗎？這將會清除所有自訂的待辦事項並恢復為範例資料。')) {
         this.clearAllData()
       }
+    },
+
+    // 匯出 Excel
+    handleExportExcel () {
+      try {
+        // 按照 ID 排序：ID 愈大的排在愈前面
+        const sortedTodos = [...this.allTodos].sort((a, b) => {
+          // 按 ID 降序排列，ID 愈大的排在後面
+          return a.id - b.id
+        })
+
+        // 準備 Excel 資料
+        const excelData = sortedTodos.map((todo, index) => ({
+          流水編號: index + 1,
+          日期: todo.date || '',
+          標題: todo.name || '',
+          內容描述: todo.content || '',
+          需要時間: todo.time ? `${todo.time} 小時` : '',
+          地點: todo.location || '',
+          備註: todo.remarks || '',
+          狀態: todo.isCompleted ? '已完成' : '待完成'
+        }))
+
+        // 創建工作表
+        const ws = XLSX.utils.json_to_sheet(excelData)
+
+        // 設定欄寬
+        const colWidths = [
+          { wch: 8 }, // 流水編號
+          { wch: 12 }, // 日期
+          { wch: 20 }, // 標題
+          { wch: 30 }, // 內容描述
+          { wch: 12 }, // 需要時間
+          { wch: 15 }, // 地點
+          { wch: 20 }, // 備註
+          { wch: 10 } // 狀態
+        ]
+        ws['!cols'] = colWidths
+
+        // 創建工作簿
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
+
+        // 生成檔案名稱（包含當前日期）
+        const now = new Date()
+        const dateStr = now.toISOString().split('T')[0]
+        const fileName = `待辦清單_${dateStr}.xlsx`
+
+        // 下載檔案
+        XLSX.writeFile(wb, fileName)
+
+        // 顯示成功訊息
+        alert(`匯出成功！檔案已下載為：${fileName}`)
+      } catch (error) {
+        console.error('匯出失敗：', error)
+        alert('匯出失敗，請稍後再試')
+      }
     }
   }
 }
@@ -205,6 +272,12 @@ export default {
   text-align: left;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
 .todo-header h1 {
   margin: 0;
   font-size: 2rem;
@@ -229,6 +302,23 @@ export default {
 
 .reset-btn:hover {
   background: rgba(255, 193, 7, 0.2);
+}
+
+.export-btn {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 5px 0;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  color: #666;
+  margin-left: 0;
+  align-self: flex-start;
+}
+
+.export-btn:hover {
+  background: rgba(76, 175, 80, 0.2);
 }
 
 .tips {
@@ -511,6 +601,12 @@ export default {
   .header-content {
     align-items: flex-start;
     text-align: left;
+  }
+
+  .header-buttons {
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-start;
   }
 
   .todo-header h1 {

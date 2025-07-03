@@ -43,7 +43,16 @@ export default {
     const index = state.todos.findIndex((todo) => todo.id === id)
     if (index !== -1) {
       const todo = state.todos[index]
-      Vue.set(todo, 'isCompleted', !todo.isCompleted)
+      const newCompletedState = !todo.isCompleted
+      Vue.set(todo, 'isCompleted', newCompletedState)
+
+      // 記錄完成時間
+      if (newCompletedState) {
+        Vue.set(todo, 'completedAt', new Date().toISOString())
+      } else {
+        Vue.set(todo, 'completedAt', null)
+      }
+
       // 保存到 localStorage
       saveToLocalStorage(state.todos, state.nextId)
     }
