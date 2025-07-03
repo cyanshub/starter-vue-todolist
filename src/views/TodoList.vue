@@ -4,8 +4,8 @@
       <div class="header-content">
         <h1>我的待辦清單</h1>
         <div class="header-buttons">
-          <button @click="handleImportExcel" class="import-btn"><v-icon name="upload" scale="1" /> 匯入 Excel</button>
-          <button @click="handleExportExcel" class="export-btn"><v-icon name="download" scale="1" /> 匯出 Excel</button>
+          <button @click="handleImportExcel" class="import-btn"><v-icon name="download" scale="1" /> 匯入 Excel</button>
+          <button @click="handleExportExcel" class="export-btn"><v-icon name="upload" scale="1" /> 匯出 Excel</button>
           <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
@@ -43,18 +43,20 @@
     <!-- 日期篩選器 -->
     <div class="date-filter">
       <div class="date-filter-content">
-        <label for="dateFilter" class="date-label">
+        <label @click="showDatePicker = true" class="date-label clickable">
           <v-icon name="calendar-alt" scale="1" />
           日期篩選
         </label>
         <div class="date-input-group">
           <input
+            v-if="dateFilter"
             type="date"
             id="dateFilter"
+            style="color: #555"
             v-model="dateFilter"
             @change="handleDateFilterChange"
             class="date-input"
-            :placeholder="dateFilter ? '' : '選擇日期'"
+            placeholder="選擇指定日期之後的待辦事項"
           />
           <button v-if="dateFilter" @click="clearDateFilter" class="clear-date-btn" title="清除日期篩選">
             <v-icon name="times" scale="1" />
@@ -63,6 +65,51 @@
       </div>
       <div v-if="dateFilter" class="date-filter-info">
         <span>顯示 {{ dateFilter }} 之後的待辦事項</span>
+      </div>
+    </div>
+
+    <!-- 日期選擇器彈窗 -->
+    <div v-if="showDatePicker" class="date-picker-overlay" @click="closeDatePicker">
+      <div class="date-picker-modal" @click.stop>
+        <div class="date-picker-header">
+          <h3>選擇日期</h3>
+          <button @click="closeDatePicker" class="close-btn">
+            <v-icon name="times" scale="1.2" />
+          </button>
+        </div>
+
+        <div class="date-picker-content">
+          <div class="month-navigation">
+            <button @click="previousMonth" class="nav-btn">
+              <v-icon name="chevron-left" scale="1" />
+            </button>
+            <span class="current-month">{{ currentMonthYear }}</span>
+            <button @click="nextMonth" class="nav-btn">
+              <v-icon name="chevron-right" scale="1" />
+            </button>
+          </div>
+
+          <div class="calendar-grid">
+            <div class="weekdays">
+              <span v-for="day in weekdays" :key="day" class="weekday">{{ day }}</span>
+            </div>
+            <div class="days">
+              <span
+                v-for="day in calendarDays"
+                :key="day.key"
+                :class="['day', { 'other-month': day.otherMonth }, { selected: day.selected }, { today: day.today }]"
+                @click="selectDate(day)"
+              >
+                {{ day.day }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="date-picker-footer">
+          <button @click="clearDate" class="clear-btn">清除</button>
+          <button @click="selectToday" class="today-btn">今天</button>
+        </div>
       </div>
     </div>
 
@@ -134,7 +181,10 @@ export default {
       showAddForm: false,
       editingTodo: null,
       currentFilter: 'all',
-      dateFilter: localStorage.getItem('todoDateFilter') || ''
+      dateFilter: localStorage.getItem('todoDateFilter') || '',
+      showDatePicker: false,
+      currentDate: new Date(),
+      weekdays: ['日', '一', '二', '三', '四', '五', '六']
     }
   },
   computed: {
@@ -172,6 +222,39 @@ export default {
       const sortedTodos = todos.sort((a, b) => b.id - a.id)
 
       return sortedTodos
+    },
+    currentMonthYear () {
+      return `${this.currentDate.getFullYear()}年${this.currentDate.getMonth() + 1}月`
+    },
+    calendarDays () {
+      const year = this.currentDate.getFullYear()
+      const month = this.currentDate.getMonth()
+      const firstDay = new Date(year, month, 1)
+      const startDate = new Date(firstDay)
+      startDate.setDate(startDate.getDate() - firstDay.getDay())
+
+      const days = []
+      const today = new Date()
+
+      for (let i = 0; i < 42; i++) {
+        const date = new Date(startDate)
+        date.setDate(startDate.getDate() + i)
+
+        const isOtherMonth = date.getMonth() !== month
+        const isSelected = this.dateFilter && date.toISOString().split('T')[0] === this.dateFilter
+        const isToday = date.toDateString() === today.toDateString()
+
+        days.push({
+          key: date.toISOString(),
+          day: date.getDate(),
+          date: date.toISOString().split('T')[0],
+          otherMonth: isOtherMonth,
+          selected: isSelected,
+          today: isToday
+        })
+      }
+
+      return days
     }
   },
   methods: {
@@ -343,6 +426,39 @@ export default {
     clearDateFilter () {
       this.dateFilter = ''
       localStorage.removeItem('todoDateFilter')
+    },
+
+    // 日期選擇器方法
+    selectDate (day) {
+      if (day.otherMonth) return
+      this.dateFilter = day.date
+      this.handleDateFilterChange()
+      this.closeDatePicker()
+    },
+
+    selectToday () {
+      const today = new Date().toISOString().split('T')[0]
+      this.dateFilter = today
+      this.handleDateFilterChange()
+      this.closeDatePicker()
+    },
+
+    clearDate () {
+      this.dateFilter = ''
+      localStorage.removeItem('todoDateFilter')
+      this.closeDatePicker()
+    },
+
+    previousMonth () {
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1)
+    },
+
+    nextMonth () {
+      this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1)
+    },
+
+    closeDatePicker () {
+      this.showDatePicker = false
     }
   }
 }
@@ -551,6 +667,15 @@ export default {
   font-size: 1rem;
 }
 
+.date-label.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.date-label.clickable:hover {
+  color: #87ceeb;
+}
+
 .date-input-group {
   display: flex;
   align-items: center;
@@ -580,7 +705,8 @@ export default {
   padding: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: #f44336;
+  border: 1px solid rgba(135, 206, 235, 0.1);
+  background-color: #87ceeb1a;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -589,6 +715,330 @@ export default {
 .clear-date-btn:hover {
   background: rgba(244, 67, 54, 0.2);
   transform: scale(1.05);
+}
+
+/* 日期選擇器彈窗樣式 */
+.date-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.date-picker-modal {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 350px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.date-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.date-picker-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 5px;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.date-picker-content {
+  padding: 20px;
+}
+
+.month-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #87ceeb;
+  padding: 8px;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(135, 206, 235, 0.1);
+}
+
+.current-month {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.calendar-grid {
+  display: grid;
+  gap: 5px;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.weekday {
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.9rem;
+  padding: 8px 0;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.day {
+  text-align: center;
+  padding: 10px 5px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.day:hover:not(.other-month) {
+  background: rgba(135, 206, 235, 0.1);
+}
+
+.day.other-month {
+  color: #ccc;
+  cursor: default;
+}
+
+.day.selected {
+  background: #87ceeb;
+  color: white;
+  font-weight: 600;
+}
+
+.day.today {
+  background: rgba(135, 206, 235, 0.2);
+  font-weight: 600;
+}
+
+.day.today.selected {
+  background: #87ceeb;
+  color: white;
+}
+
+.date-picker-footer {
+  display: flex;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
+
+.today-btn,
+.clear-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.today-btn {
+  background: #87ceeb;
+  color: white;
+}
+
+.today-btn:hover {
+  background: #7bb8d9;
+}
+
+.clear-btn {
+  background: rgba(135, 206, 235, 0.1);
+  color: #87ceeb;
+  border: 1px solid rgba(135, 206, 235, 0.3);
+}
+
+.clear-btn:hover {
+  background: rgba(135, 206, 235, 0.2);
+  border-color: #87ceeb;
+}
+
+@media (max-width: 768px) {
+  .date-picker-modal {
+    width: 95%;
+    max-width: 320px;
+    max-height: 80vh;
+  }
+
+  .date-picker-header {
+    padding: 15px;
+  }
+
+  .date-picker-content {
+    padding: 15px;
+  }
+
+  .date-picker-footer {
+    padding: 15px;
+  }
+
+  .day {
+    padding: 8px 3px;
+    font-size: 0.85rem;
+  }
+}
+
+/* 手機橫放時的樣式 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .date-picker-overlay {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .date-picker-modal {
+    width: 95%;
+    max-width: 350px;
+    max-height: 60vh;
+    margin-top: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .date-picker-header {
+    padding: 8px 12px;
+  }
+
+  .date-picker-header h3 {
+    font-size: 1rem;
+  }
+
+  .date-picker-content {
+    padding: 8px 12px;
+  }
+
+  .date-picker-footer {
+    padding: 8px 12px;
+  }
+
+  .day {
+    padding: 4px 1px;
+    font-size: 0.75rem;
+  }
+
+  .weekday {
+    font-size: 0.75rem;
+    padding: 4px 0;
+  }
+
+  .current-month {
+    font-size: 0.9rem;
+  }
+
+  .nav-btn {
+    padding: 4px;
+    font-size: 0.8rem;
+  }
+
+  .today-btn,
+  .clear-btn {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 極小螢幕的額外調整 */
+@media (max-width: 480px) and (orientation: landscape) {
+  .date-picker-overlay {
+    padding: 5px;
+  }
+
+  .date-picker-modal {
+    width: 98%;
+    max-width: 300px;
+    max-height: 50vh;
+    margin-top: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .date-picker-header {
+    padding: 6px 10px;
+  }
+
+  .date-picker-header h3 {
+    font-size: 0.9rem;
+  }
+
+  .date-picker-content {
+    padding: 6px 10px;
+  }
+
+  .date-picker-footer {
+    padding: 6px 10px;
+  }
+
+  .day {
+    padding: 3px 1px;
+    font-size: 0.7rem;
+  }
+
+  .weekday {
+    font-size: 0.7rem;
+    padding: 3px 0;
+  }
+
+  .current-month {
+    font-size: 0.8rem;
+  }
+
+  .nav-btn {
+    padding: 3px;
+    font-size: 0.7rem;
+  }
+
+  .today-btn,
+  .clear-btn {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
 }
 
 .date-filter-info {
