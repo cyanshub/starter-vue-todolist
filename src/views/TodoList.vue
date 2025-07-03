@@ -40,6 +40,32 @@
       <button @click="currentFilter = 'completed'" :class="{ active: currentFilter === 'completed' }" class="filter-btn">已完成</button>
     </div>
 
+    <!-- 日期篩選器 -->
+    <div class="date-filter">
+      <div class="date-filter-content">
+        <label for="dateFilter" class="date-label">
+          <v-icon name="calendar-alt" scale="1" />
+          日期篩選
+        </label>
+        <div class="date-input-group">
+          <input
+            type="date"
+            id="dateFilter"
+            v-model="dateFilter"
+            @change="handleDateFilterChange"
+            class="date-input"
+            :placeholder="dateFilter ? '' : '選擇日期'"
+          />
+          <button v-if="dateFilter" @click="clearDateFilter" class="clear-date-btn" title="清除日期篩選">
+            <v-icon name="times" scale="1" />
+          </button>
+        </div>
+      </div>
+      <div v-if="dateFilter" class="date-filter-info">
+        <span>顯示 {{ dateFilter }} 之後的待辦事項</span>
+      </div>
+    </div>
+
     <!-- Todo 列表 -->
     <div class="todos-container">
       <div v-for="todo in filteredTodos" :key="todo.id" class="todo-item" :class="{ completed: todo.isCompleted }">
@@ -107,7 +133,8 @@ export default {
     return {
       showAddForm: false,
       editingTodo: null,
-      currentFilter: 'all'
+      currentFilter: 'all',
+      dateFilter: localStorage.getItem('todoDateFilter') || ''
     }
   },
   computed: {
@@ -130,6 +157,15 @@ export default {
         todos = allTodos.filter((todo) => todo.isCompleted)
       } else if (this.currentFilter === 'pending') {
         todos = allTodos.filter((todo) => !todo.isCompleted)
+      }
+
+      // 根據日期篩選
+      if (this.dateFilter) {
+        todos = todos.filter((todo) => {
+          const todoDate = new Date(todo.date)
+          const filterDate = new Date(this.dateFilter)
+          return todoDate >= filterDate
+        })
       }
 
       // 按照 ID 排序：ID 愈大的排在愈前面
@@ -291,6 +327,22 @@ export default {
       document.body.appendChild(fileInput)
       fileInput.click()
       document.body.removeChild(fileInput)
+    },
+
+    // 處理日期篩選變更
+    handleDateFilterChange () {
+      // 保存到 localStorage
+      if (this.dateFilter) {
+        localStorage.setItem('todoDateFilter', this.dateFilter)
+      } else {
+        localStorage.removeItem('todoDateFilter')
+      }
+    },
+
+    // 清除日期篩選
+    clearDateFilter () {
+      this.dateFilter = ''
+      localStorage.removeItem('todoDateFilter')
     }
   }
 }
@@ -472,6 +524,81 @@ export default {
 .filter-btn.active {
   background: linear-gradient(45deg, #87ceeb, #b0e0e6);
   border-color: transparent;
+}
+
+.date-filter {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(135, 206, 235, 0.2);
+}
+
+.date-filter-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.date-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 1rem;
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-input {
+  padding: 10px 15px;
+  border: 1px solid rgba(135, 206, 235, 0.3);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #87ceeb;
+  box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.1);
+}
+
+.clear-date-btn {
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #f44336;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-date-btn:hover {
+  background: rgba(244, 67, 54, 0.2);
+  transform: scale(1.05);
+}
+
+.date-filter-info {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(135, 206, 235, 0.1);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #87ceeb;
+  border-left: 3px solid #87ceeb;
 }
 
 .todos-container {
@@ -713,6 +840,30 @@ export default {
 
   .filter-btn {
     padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .date-filter {
+    padding: 15px;
+  }
+
+  .date-filter-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .date-input-group {
+    width: 100%;
+  }
+
+  .date-input {
+    flex: 1;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+
+  .date-label {
     font-size: 0.9rem;
   }
 
