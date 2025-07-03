@@ -9,7 +9,7 @@
           <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
-          <p>✨ 被新增的待辦事項會被保存在本地的設備端</p>
+          <p>✨ 待辦事項僅儲存於您的設備，無後端資料庫</p>
           <p>✨ 點選重置資料將清空本地資料並恢復成 Demo 模式</p>
           <p>✨ 可利用匯入/匯出 Excel 功能備份或還原資料</p>
         </div>
