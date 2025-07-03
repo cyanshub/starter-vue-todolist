@@ -4,12 +4,14 @@
       <div class="header-content">
         <h1>我的待辦清單</h1>
         <div class="header-buttons">
-          <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
+          <button @click="handleImportExcel" class="import-btn"><v-icon name="upload" scale="1" /> 匯入 Excel</button>
           <button @click="handleExportExcel" class="export-btn"><v-icon name="download" scale="1" /> 匯出 Excel</button>
+          <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
           <p>✨ 被新增的待辦事項會被保存在本地的設備端</p>
-          <p>✨ 點選重置資料將清空本地資料並恢復 Demo 模式</p>
+          <p>✨ 點選重置資料將清空本地資料並恢復成 Demo 模式</p>
+          <p>✨ 可利用匯入/匯出 Excel 功能備份或還原資料</p>
         </div>
       </div>
       <button @click="showAddForm = true" class="add-btn"><span>➕</span> 新增待辦事項</button>
@@ -119,20 +121,21 @@ export default {
 
     // 根據篩選條件回傳對應的待辦清單
     filteredTodos () {
-      let todos
-      switch (this.currentFilter) {
-        case 'completed':
-          todos = this.completedTodos
-          break
-        case 'pending':
-          todos = this.pendingTodos
-          break
-        default:
-          todos = this.allTodos
+      // 直接從 Vuex state 獲取原始資料，避免 getters 的排序干擾
+      const allTodos = this.$store.state.todos.todos
+
+      // 根據篩選條件篩選
+      let todos = allTodos
+      if (this.currentFilter === 'completed') {
+        todos = allTodos.filter((todo) => todo.isCompleted)
+      } else if (this.currentFilter === 'pending') {
+        todos = allTodos.filter((todo) => !todo.isCompleted)
       }
 
       // 按照 ID 排序：ID 愈大的排在愈前面
-      return todos.sort((a, b) => b.id - a.id)
+      const sortedTodos = todos.sort((a, b) => b.id - a.id)
+
+      return sortedTodos
     }
   },
   methods: {
@@ -159,9 +162,8 @@ export default {
     saveTodo (todoData) {
       if (this.editingTodo) {
         this.updateTodo({
-          ...todoData,
           id: this.editingTodo.id,
-          isCompleted: this.editingTodo.isCompleted
+          ...todoData
         })
       } else {
         this.addTodo(todoData)
@@ -187,57 +189,108 @@ export default {
     handleExportExcel () {
       try {
         // 按照 ID 排序：ID 愈大的排在愈前面
-        const sortedTodos = [...this.allTodos].sort((a, b) => {
-          // 按 ID 降序排列，ID 愈大的排在後面
-          return a.id - b.id
-        })
+        const sortedTodos = [...this.$store.state.todos.todos].sort((a, b) => b.id - a.id)
 
         // 準備 Excel 資料
-        const excelData = sortedTodos.map((todo, index) => ({
-          流水編號: index + 1,
-          日期: todo.date || '',
-          標題: todo.name || '',
-          內容描述: todo.content || '',
-          需要時間: todo.time ? `${todo.time} 小時` : '',
-          地點: todo.location || '',
-          備註: todo.remarks || '',
-          狀態: todo.isCompleted ? '已完成' : '待完成'
-        }))
+        const excelData = sortedTodos.map((todo, index) => [
+          index + 1, // 序號
+          todo.date,
+          todo.name,
+          todo.content || '',
+          todo.timeNeeded || '',
+          todo.location || '',
+          todo.remarks || '',
+          todo.isCompleted ? '已完成' : '未完成'
+        ])
 
-        // 創建工作表
-        const ws = XLSX.utils.json_to_sheet(excelData)
+        // 建立工作簿
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.aoa_to_sheet([['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '狀態'], ...excelData])
 
         // 設定欄寬
-        const colWidths = [
-          { wch: 8 }, // 流水編號
-          { wch: 12 }, // 日期
-          { wch: 20 }, // 標題
-          { wch: 30 }, // 內容描述
-          { wch: 12 }, // 需要時間
-          { wch: 15 }, // 地點
-          { wch: 20 }, // 備註
-          { wch: 10 } // 狀態
-        ]
-        ws['!cols'] = colWidths
+        const colWidths = [8, 12, 20, 30, 12, 15, 20, 10]
+        ws['!cols'] = colWidths.map((width) => ({ width }))
 
-        // 創建工作簿
-        const wb = XLSX.utils.book_new()
+        // 加入工作簿並下載
         XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
-
-        // 生成檔案名稱（包含當前日期）
-        const now = new Date()
-        const dateStr = now.toISOString().split('T')[0]
-        const fileName = `待辦清單_${dateStr}.xlsx`
-
-        // 下載檔案
+        const fileName = `待辦清單_${new Date().toISOString().split('T')[0]}.xlsx`
         XLSX.writeFile(wb, fileName)
 
-        // 顯示成功訊息
-        alert(`匯出成功！檔案已下載為：${fileName}`)
+        alert('匯出成功！')
       } catch (error) {
         console.error('匯出失敗：', error)
         alert('匯出失敗，請稍後再試')
       }
+    },
+
+    // 匯入 Excel
+    handleImportExcel () {
+      // 創建隱藏的檔案輸入元素
+      const fileInput = document.createElement('input')
+      fileInput.type = 'file'
+      fileInput.accept = '.xlsx,.xls'
+      fileInput.style.display = 'none'
+
+      fileInput.onchange = (event) => {
+        const file = event.target.files[0]
+        if (!file) return
+
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result)
+            const workbook = XLSX.read(data, { type: 'array' })
+            const sheetName = workbook.SheetNames[0]
+            const worksheet = workbook.Sheets[sheetName]
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+
+            // 跳過標題行，處理資料行
+            const importedTodos = jsonData.slice(1).map((row, index) => {
+              // 解析狀態欄位
+              const statusText = row[7] || ''
+              const isCompleted = statusText === '已完成'
+
+              return {
+                id: Date.now() + (jsonData.length - 1 - index), // 顛倒 ID 順序
+                date: row[1] || new Date().toISOString().split('T')[0],
+                name: row[2] || '',
+                content: row[3] || null,
+                timeNeeded: row[4] || null,
+                location: row[5] || null,
+                remarks: row[6] || null,
+                isCompleted: isCompleted
+              }
+            })
+
+            // 確認匯入
+            if (confirm(`確定要匯入 ${importedTodos.length} 個待辦事項嗎？這將會覆蓋現有的待辦清單。`)) {
+              // 清除現有資料
+              this.clearAllData()
+
+              // 逐個添加匯入的待辦事項
+              importedTodos.forEach((todo) => {
+                // 直接傳遞包含 isCompleted 的完整 todo 物件
+                this.addTodo(todo)
+              })
+
+              // 強制更新 Vue 響應式系統
+              this.$forceUpdate()
+
+              alert('匯入成功！')
+            }
+          } catch (error) {
+            console.error('匯入失敗：', error)
+            alert('匯入失敗，請檢查檔案格式是否正確')
+          }
+        }
+
+        reader.readAsArrayBuffer(file)
+      }
+
+      // 觸發檔案選擇
+      document.body.appendChild(fileInput)
+      fileInput.click()
+      document.body.removeChild(fileInput)
     }
   }
 }
@@ -319,6 +372,23 @@ export default {
 
 .export-btn:hover {
   background: rgba(76, 175, 80, 0.2);
+}
+
+.import-btn {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 5px 0;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  color: #666;
+  margin-left: 0;
+  align-self: flex-start;
+}
+
+.import-btn:hover {
+  background: rgba(33, 150, 243, 0.2);
 }
 
 .tips {
@@ -604,13 +674,21 @@ export default {
   }
 
   .header-buttons {
-    flex-direction: column;
-    gap: 5px;
-    align-items: flex-start;
+    flex-direction: row;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .todo-header h1 {
     font-size: 1.5rem;
+  }
+
+  .import-btn,
+  .export-btn,
+  .reset-btn {
+    font-size: 0.8rem;
+    padding: 4px 0;
   }
 
   .add-btn {

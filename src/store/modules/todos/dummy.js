@@ -8,7 +8,6 @@ export const todosDummy = [
     time: 2,
     date: '2024-08-31',
     location: '家裡書房',
-    creator: 'Chin-Yang, Huang',
     isCompleted: true
   },
   {
@@ -19,7 +18,6 @@ export const todosDummy = [
     time: 1.5,
     date: '2024-08-31',
     location: '河濱公園',
-    creator: 'Chin-Yang, Huang',
     isCompleted: false
   },
   {
@@ -30,7 +28,6 @@ export const todosDummy = [
     time: 2.5,
     date: '2024-08-31',
     location: '樂器行',
-    creator: 'Chin-Yang, Huang',
     isCompleted: false
   }
 ]

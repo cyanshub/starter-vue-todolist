@@ -21,8 +21,16 @@ export default {
       state.todos = state.todos.filter(t => ![991, 992, 993].includes(t.id))
     }
 
+    // 直接使用傳入的 todo 物件（action 已經處理過了）
     state.todos.push(todo)
-    state.nextId++
+
+    // 只有在 id 是 nextId 時才自增
+    if (todo.id >= state.nextId) {
+      state.nextId = todo.id + 1
+    } else {
+      state.nextId++
+    }
+
     // 保存到 localStorage
     saveToLocalStorage(state.todos, state.nextId)
   },
