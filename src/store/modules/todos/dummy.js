@@ -3,7 +3,7 @@ export const todosDummy = [
   {
     id: 991,
     name: '完成今日目標：學習 Vue.js',
-    content: '閱讀 Vue.js 官方文檔，練習組件開發',
+    content: '閱讀 Vue.js 官方文檔，練習組件開發\n網址: https://vuejs.org',
     remarks: '記得做筆記，明天要分享學習心得',
     time: 2,
     date: '2024-08-31',
@@ -25,7 +25,7 @@ export const todosDummy = [
   {
     id: 993,
     name: '音樂時間：練習爵士鼓',
-    content: '練習基本的鼓點節奏',
+    content: '練習基本的鼓點節奏\n網址: https://www.youtube.com',
     remarks: '記得預約樂器行教室，帶鼓棒',
     time: 2.5,
     date: '2024-08-31',
