@@ -2,7 +2,7 @@
   <div class="todo-list">
     <div class="todo-header">
       <div class="header-content">
-        <h1>我的行動清單</h1>
+        <h1>今日待辦帖</h1>
         <div class="header-buttons">
           <button @click="handleImportExcel" class="import-btn"><v-icon name="download" scale="1" /> 匯入 Excel</button>
           <button @click="handleExportExcel" class="export-btn"><v-icon name="upload" scale="1" /> 匯出 Excel</button>
@@ -258,9 +258,7 @@ export default {
 
       // 同時套用兩種排序方式: 先 ID 再 時間
       // 按照 ID 排序：ID 愈大的排在愈前面
-      const sortedTodos = todos
-        .sort((a, b) => b.id - a.id)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+      const sortedTodos = todos.sort((a, b) => b.id - a.id).sort((a, b) => new Date(b.date) - new Date(a.date))
 
       return sortedTodos
     },
@@ -405,6 +403,14 @@ export default {
       }
     },
 
+    // 獲取台北時間的日期格式 (YYYY-MM-DD)
+    getTaipeiDateString () {
+      const now = new Date()
+      // 台北時區是 UTC+8
+      const taipeiTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+      return taipeiTime.toISOString().split('T')[0]
+    },
+
     // 匯出 Excel
     handleExportExcel () {
       try {
@@ -436,7 +442,7 @@ export default {
 
         // 加入工作簿並下載
         XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
-        const fileName = `行動清單_${new Date().toISOString().split('T')[0]}.xlsx`
+        const fileName = `今日待辦帖_${this.getTaipeiDateString()}.xlsx`
         XLSX.writeFile(wb, fileName)
 
         alert('匯出成功！')
