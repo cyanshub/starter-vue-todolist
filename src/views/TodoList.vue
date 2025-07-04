@@ -138,7 +138,7 @@
             </div>
           </div>
 
-          <p class="todo-description">{{ todo.content }}</p>
+          <p class="todo-description" v-if="todo.content" v-html="formatContent(todo.content)"></p>
 
           <div class="todo-details">
             <div class="detail-item">
@@ -279,6 +279,19 @@ export default {
     // 則需要在第一個參數指定模組名稱
     // 第二個參數則是 actions 方法陣列
     ...mapActions('todos', ['addTodo', 'updateTodo', 'deleteTodo', 'toggleTodo', 'clearAllData']),
+
+    // 格式化內容，將 URL 轉換為可點擊的連結
+    formatContent (content) {
+      if (!content) return ''
+
+      // 正則表達式匹配 http/https URL
+      const urlRegex = /(https?:\/\/[^\s]+)/g
+
+      // 將 URL 替換為 HTML 連結，使用內嵌樣式定義暗藍色
+      return content.replace(urlRegex, (url) => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #1e3a8a; text-decoration: none; transition: all 0.3s ease;" onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';" onmouseout="this.style.color='#1e3a8a'; this.style.textDecoration='none';">${url}</a>`
+      })
+    },
 
     // 複製待辦事項
     copyTodo (todo) {
@@ -1190,6 +1203,8 @@ export default {
   margin: 10px 0;
   color: #666;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .todo-details {
