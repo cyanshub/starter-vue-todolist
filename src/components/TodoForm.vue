@@ -31,7 +31,15 @@
 
           <div class="form-group">
             <label for="time">需要時間 [hr]</label>
-            <input id="time" v-model.number="form.time" type="number" min="0" step="0.5" placeholder="時間接受小數點 (可選)" class="form-input" />
+            <input
+              id="time"
+              v-model.number="form.time"
+              type="number"
+              min="0"
+              step="0.5"
+              placeholder="時間接受小數點 (可選)"
+              class="form-input"
+            />
           </div>
         </div>
 
@@ -43,6 +51,11 @@
         <div class="form-group">
           <label for="remarks">備註</label>
           <textarea id="remarks" v-model="form.remarks" placeholder="額外的提醒或備註（可選）" rows="2" class="form-textarea"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="tag">標籤</label>
+          <input id="tag" v-model="form.tag" type="text" placeholder="例如：#運動 #彈鋼琴 #練吉他 #爵士鼓（可選）" class="form-input" />
         </div>
 
         <div class="form-actions">
@@ -73,7 +86,8 @@ export default {
         date: '',
         time: '1',
         location: '',
-        remarks: ''
+        remarks: '',
+        tag: ''
       }
     }
   },
@@ -102,7 +116,8 @@ export default {
         date: new Date().toISOString().split('T')[0],
         time: '1',
         location: '',
-        remarks: ''
+        remarks: '',
+        tag: ''
       }
     },
 
@@ -113,7 +128,8 @@ export default {
         date: this.form.date,
         time: this.form.time || null,
         location: (this.form.location || '').trim() || null,
-        remarks: (this.form.remarks || '').trim() || null
+        remarks: (this.form.remarks || '').trim() || null,
+        tag: (this.form.tag || '').trim() || null
       }
 
       if (this.isEditing && this.todo) {
@@ -255,6 +271,14 @@ export default {
 .form-textarea {
   resize: vertical;
   min-height: 80px;
+}
+
+.form-help {
+  display: block;
+  margin-top: 5px;
+  color: #666;
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
 .form-actions {

@@ -12,6 +12,7 @@
           <p>✨ 待辦事項僅儲存於您的設備，無後端資料庫</p>
           <p>✨ 點選重置資料將清空本地資料並恢復成 Demo 模式</p>
           <p>✨ 可利用匯入/匯出 Excel 功能備份或還原資料</p>
+          <p>✨ 可自定義標籤，並選擇標籤決定要列出的事項</p>
         </div>
       </div>
       <button @click="showAddForm = true" class="add-btn"><span>➕</span> 新增待辦事項</button>
@@ -34,10 +35,21 @@
     </div>
 
     <!-- 篩選器 -->
-    <div class="filter-tabs">
-      <button @click="currentFilter = 'all'" :class="{ active: currentFilter === 'all' }" class="filter-btn">全部</button>
-      <button @click="currentFilter = 'pending'" :class="{ active: currentFilter === 'pending' }" class="filter-btn">待完成</button>
-      <button @click="currentFilter = 'completed'" :class="{ active: currentFilter === 'completed' }" class="filter-btn">已完成</button>
+    <div class="filter-section">
+      <div class="tag-filter">
+        <div class="tag-select-container">
+          <select v-model="selectedTag" @change="handleTagFilterChange" class="tag-select">
+            <option value="">所有標籤</option>
+            <option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <button @click="currentFilter = 'all'" :class="{ active: currentFilter === 'all' }" class="filter-btn">全部</button>
+        <button @click="currentFilter = 'pending'" :class="{ active: currentFilter === 'pending' }" class="filter-btn">待完成</button>
+        <button @click="currentFilter = 'completed'" :class="{ active: currentFilter === 'completed' }" class="filter-btn">已完成</button>
+      </div>
     </div>
 
     <!-- 日期篩選器 -->
@@ -159,6 +171,13 @@
             <span class="detail-icon"><v-icon name="sticky-note" scale="1" /></span>
             <span>{{ todo.remarks }}</span>
           </div>
+
+          <div class="todo-tags" v-if="todo.tag">
+            <span class="detail-icon"><v-icon name="tags" scale="1" /></span>
+            <div class="tags-container">
+              <span v-for="tag in todo.tag.split(' ').filter((t) => t.trim())" :key="tag" class="tag-item">{{ tag }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -188,6 +207,7 @@ export default {
       editingTodo: null,
       currentFilter: 'all',
       dateFilter: localStorage.getItem('todoDateFilter') || '',
+      selectedTag: localStorage.getItem('todoSelectedTag') || '',
       showDatePicker: false,
       currentDate: new Date(),
       weekdays: ['日', '一', '二', '三', '四', '五', '六']
@@ -221,6 +241,15 @@ export default {
           const todoDate = new Date(todo.date)
           const filterDate = new Date(this.dateFilter)
           return todoDate >= filterDate
+        })
+      }
+
+      // 根據標籤篩選
+      if (this.selectedTag) {
+        todos = todos.filter((todo) => {
+          if (!todo.tag) return false
+          const tags = todo.tag.split(' ').map((tag) => tag.trim())
+          return tags.includes(this.selectedTag)
         })
       }
 
@@ -269,6 +298,23 @@ export default {
       }
 
       return days
+    },
+    // 可用的標籤列表
+    availableTags () {
+      // 使用當前篩選後的待辦事項來提取標籤
+      const filteredTodos = this.filteredTodos
+      const tagSet = new Set()
+
+      filteredTodos.forEach((todo) => {
+        if (todo.tag) {
+          // 分割標籤並清理空白
+          const tags = todo.tag.split(' ').filter((tag) => tag.trim() !== '')
+          tags.forEach((tag) => tagSet.add(tag.trim()))
+        }
+      })
+
+      // 轉換為陣列並排序
+      return Array.from(tagSet).sort()
     }
   },
   methods: {
@@ -363,15 +409,16 @@ export default {
           todo.timeNeeded || '',
           todo.location || '',
           todo.remarks || '',
+          todo.tag || '',
           todo.isCompleted ? '已完成' : '未完成'
         ])
 
         // 建立工作簿
         const wb = XLSX.utils.book_new()
-        const ws = XLSX.utils.aoa_to_sheet([['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '狀態'], ...excelData])
+        const ws = XLSX.utils.aoa_to_sheet([['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '標籤', '狀態'], ...excelData])
 
         // 設定欄寬
-        const colWidths = [8, 12, 20, 30, 12, 15, 20, 10]
+        const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10]
         ws['!cols'] = colWidths.map((width) => ({ width }))
 
         // 加入工作簿並下載
@@ -409,8 +456,8 @@ export default {
 
             // 跳過標題行，處理資料行
             const importedTodos = jsonData.slice(1).map((row, index) => {
-              // 解析狀態欄位
-              const statusText = row[7] || ''
+              // 解析狀態欄位（標籤欄位後移一位）
+              const statusText = row[8] || ''
               const isCompleted = statusText === '已完成'
 
               return {
@@ -421,6 +468,7 @@ export default {
                 timeNeeded: row[4] || null,
                 location: row[5] || null,
                 remarks: row[6] || null,
+                tag: row[7] || null,
                 isCompleted: isCompleted
               }
             })
@@ -503,6 +551,16 @@ export default {
 
     closeDatePicker () {
       this.showDatePicker = false
+    },
+
+    // 處理標籤篩選變更
+    handleTagFilterChange () {
+      // 保存到 localStorage
+      if (this.selectedTag) {
+        localStorage.setItem('todoSelectedTag', this.selectedTag)
+      } else {
+        localStorage.removeItem('todoSelectedTag')
+      }
     }
   }
 }
@@ -669,11 +727,32 @@ export default {
   opacity: 0.8;
 }
 
+.filter-section {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  margin-bottom: 30px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
 .filter-tabs {
   display: flex;
   gap: 10px;
-  margin-bottom: 30px;
-  justify-content: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 180px;
+  margin-left: 20px;
+}
+
+.tag-filter {
+  display: flex;
+  justify-content: flex-start;
+  flex: 1;
+  min-width: 180px;
+  margin-right: 20px;
 }
 
 .filter-btn {
@@ -689,6 +768,32 @@ export default {
 .filter-btn.active {
   background: linear-gradient(45deg, #87ceeb, #b0e0e6);
   border-color: transparent;
+}
+
+.tag-select-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tag-select {
+  padding: 10px 15px;
+  border: 1px solid rgba(135, 206, 235, 0.3);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  min-width: 200px;
+  width: 100%;
+}
+
+.tag-select:focus {
+  outline: none;
+  border-color: #87ceeb;
+  box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.1);
 }
 
 .date-filter {
@@ -973,6 +1078,113 @@ export default {
     padding: 8px 3px;
     font-size: 0.85rem;
   }
+
+  .filter-section {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .filter-tabs {
+    margin-right: 0;
+    min-width: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tag-filter {
+    margin-left: 0;
+    min-width: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .tag-select-container {
+    width: 100%;
+  }
+
+  .tag-select {
+    min-width: 100%;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    width: 100%;
+  }
+
+  .tag-select-hint {
+    font-size: 0.6rem;
+    text-align: right;
+  }
+
+  .date-filter {
+    padding: 15px;
+  }
+
+  .date-filter-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .date-input-group {
+    width: 100%;
+  }
+
+  .date-input {
+    flex: 1;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+
+  .date-label {
+    font-size: 0.9rem;
+  }
+
+  .todo-item {
+    padding: 15px;
+  }
+
+  .todo-header-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .todo-title {
+    flex: 1;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .todo-actions {
+    flex-shrink: 0;
+  }
+
+  .todo-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .detail-item {
+    font-size: 0.85rem;
+  }
+
+  .todo-remarks {
+    font-size: 0.85rem;
+    padding: 8px;
+  }
+
+  .empty-state {
+    padding: 40px 15px;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+  }
 }
 
 /* 手機橫放時的樣式 */
@@ -1255,6 +1467,39 @@ export default {
   color: #87ceeb;
 }
 
+.todo-tags {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(255, 193, 7, 0.1);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.todo-tags .detail-icon {
+  color: #ffc107;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tag-item {
+  background: rgba(255, 193, 7, 0.2);
+  color: #b8860b;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -1346,14 +1591,40 @@ export default {
     padding: 15px;
   }
 
+  .filter-section {
+    gap: 12px;
+    flex-direction: column;
+  }
+
   .filter-tabs {
     flex-wrap: wrap;
     gap: 8px;
+    order: 1;
+  }
+
+  .tag-filter {
+    order: 2;
   }
 
   .filter-btn {
     padding: 8px 16px;
     font-size: 0.9rem;
+  }
+
+  .tag-select-container {
+    width: 100%;
+  }
+
+  .tag-select {
+    min-width: 100%;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    width: 100%;
+  }
+
+  .tag-select-hint {
+    font-size: 0.6rem;
+    text-align: right;
   }
 
   .date-filter {

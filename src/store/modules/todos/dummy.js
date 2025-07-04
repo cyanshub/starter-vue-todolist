@@ -8,6 +8,7 @@ export const todosDummy = [
     time: 2,
     date: '2024-08-31',
     location: '家裡書房',
+    tag: '#學習 #程式',
     isCompleted: true
   },
   {
@@ -18,6 +19,7 @@ export const todosDummy = [
     time: 1.5,
     date: '2024-08-31',
     location: '河濱公園',
+    tag: '#運動 #健康',
     isCompleted: false
   },
   {
@@ -28,6 +30,7 @@ export const todosDummy = [
     time: 2.5,
     date: '2024-08-31',
     location: '樂器行',
+    tag: '#音樂 #爵士鼓',
     isCompleted: false
   }
 ]
