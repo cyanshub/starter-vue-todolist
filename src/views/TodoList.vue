@@ -348,7 +348,7 @@ export default {
     // 複製待辦事項
     copyTodo (todo) {
       // 獲取當前日期
-      const today = new Date().toISOString().split('T')[0]
+      const today = this.getTaipeiDateString()
 
       // 創建複製的待辦事項，移除 id 並設定新的屬性
       const copiedTodo = {
@@ -481,7 +481,7 @@ export default {
 
               return {
                 id: Date.now() + (jsonData.length - 1 - index), // 顛倒 ID 順序
-                date: row[1] || new Date().toISOString().split('T')[0],
+                date: row[1] || this.getTaipeiDateString(),
                 name: row[2] || '',
                 content: row[3] || null,
                 timeNeeded: row[4] || null,
@@ -546,7 +546,7 @@ export default {
     },
 
     selectToday () {
-      const today = new Date().toISOString().split('T')[0]
+      const today = this.getTaipeiDateString()
       this.dateFilter = today
       this.handleDateFilterChange()
       this.closeDatePicker()

@@ -109,11 +109,19 @@ export default {
     }
   },
   methods: {
+    // 獲取台北時間的日期格式 (YYYY-MM-DD)
+    getTaipeiDateString () {
+      const now = new Date()
+      // 台北時區是 UTC+8
+      const taipeiTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+      return taipeiTime.toISOString().split('T')[0]
+    },
+
     resetForm () {
       this.form = {
         name: '',
         content: '',
-        date: new Date().toISOString().split('T')[0],
+        date: this.getTaipeiDateString(),
         time: '1',
         location: '',
         remarks: '',
