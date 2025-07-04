@@ -167,7 +167,7 @@
             </div>
             <div class="detail-item" v-if="todo.location">
               <span class="detail-icon"><v-icon name="map-marker-alt" scale="1" /></span>
-              <span>{{ todo.location }}</span>
+              <span v-html="formatContent(todo.location)"></span>
             </div>
           </div>
 
@@ -336,9 +336,11 @@ export default {
       // 正則表達式匹配 http/https URL
       const urlRegex = /(https?:\/\/[^\s]+)/g
 
-      // 將 URL 替換為 HTML 連結，使用內嵌樣式定義暗藍色
+      // 將 URL 替換為 HTML 連結，使用內嵌樣式定義暗藍色並限制顯示長度
       return content.replace(urlRegex, (url) => {
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #1e3a8a; text-decoration: none; transition: all 0.3s ease;" onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';" onmouseout="this.style.color='#1e3a8a'; this.style.textDecoration='none';">${url}</a>`
+        // 限制顯示長度為 50 個字元，超過則用省略符號
+        const displayText = url.length > 50 ? url.substring(0, 50) + '...' : url
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #1e3a8a; text-decoration: none; transition: all 0.3s ease; white-space: nowrap;" onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';" onmouseout="this.style.color='#1e3a8a'; this.style.textDecoration='none';" title="${url}">${displayText}</a>`
       })
     },
 
@@ -1420,6 +1422,20 @@ export default {
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+.todo-description a {
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  display: block;
+  max-height: 3em;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .todo-details {
@@ -1431,10 +1447,31 @@ export default {
 
 .detail-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 5px;
   font-size: 0.9rem;
   color: #666;
+  flex-wrap: wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.detail-item span {
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.detail-item a {
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  display: block;
+  max-height: 3em;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detail-item svg {
