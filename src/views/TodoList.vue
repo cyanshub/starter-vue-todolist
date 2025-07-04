@@ -2,7 +2,7 @@
   <div class="todo-list">
     <div class="todo-header">
       <div class="header-content">
-        <h1>我的待辦清單</h1>
+        <h1>我的行動清單</h1>
         <div class="header-buttons">
           <button @click="handleImportExcel" class="import-btn"><v-icon name="download" scale="1" /> 匯入 Excel</button>
           <button @click="handleExportExcel" class="export-btn"><v-icon name="upload" scale="1" /> 匯出 Excel</button>
@@ -423,7 +423,7 @@ export default {
 
         // 加入工作簿並下載
         XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
-        const fileName = `待辦清單_${new Date().toISOString().split('T')[0]}.xlsx`
+        const fileName = `行動清單_${new Date().toISOString().split('T')[0]}.xlsx`
         XLSX.writeFile(wb, fileName)
 
         alert('匯出成功！')
