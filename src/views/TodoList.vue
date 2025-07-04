@@ -126,10 +126,13 @@
               <h3>{{ todo.name }}</h3>
             </div>
             <div class="todo-actions">
-              <button @click="editTodo(todo)" class="action-btn edit-btn">
+              <button @click="copyTodo(todo)" class="action-btn copy-btn" title="複製待辦事項">
+                <v-icon name="copy" scale="1.2" />
+              </button>
+              <button @click="editTodo(todo)" class="action-btn edit-btn" title="編輯待辦事項">
                 <v-icon name="edit" scale="1.2" />
               </button>
-              <button @click="handleDeleteTodo(todo.id)" class="action-btn delete-btn">
+              <button @click="handleDeleteTodo(todo.id)" class="action-btn delete-btn" title="刪除待辦事項">
                 <v-icon name="trash-alt" scale="1.2" />
               </button>
             </div>
@@ -276,6 +279,23 @@ export default {
     // 則需要在第一個參數指定模組名稱
     // 第二個參數則是 actions 方法陣列
     ...mapActions('todos', ['addTodo', 'updateTodo', 'deleteTodo', 'toggleTodo', 'clearAllData']),
+
+    // 複製待辦事項
+    copyTodo (todo) {
+      // 獲取當前日期
+      const today = new Date().toISOString().split('T')[0]
+
+      // 創建複製的待辦事項，移除 id 並設定新的屬性
+      const copiedTodo = {
+        ...todo,
+        id: undefined, // 移除 id，讓系統自動生成新的 id
+        date: today, // 設定為今天的日期
+        isCompleted: false // 設定為未完成狀態
+      }
+
+      // 添加新的待辦事項
+      this.addTodo(copiedTodo)
+    },
 
     // 開啟編輯模式
     editTodo (todo) {
@@ -1152,6 +1172,10 @@ export default {
 .action-btn svg {
   fill: currentColor;
   stroke: currentColor;
+}
+
+.copy-btn:hover {
+  background: rgba(33, 150, 243, 0.2);
 }
 
 .edit-btn:hover {
