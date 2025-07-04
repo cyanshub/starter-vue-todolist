@@ -21,16 +21,16 @@
     <!-- 統計資訊 -->
     <div class="stats">
       <div class="stat-item">
+        <span class="stat-number">{{ filteredTodos.length }}</span>
+        <span class="stat-label">總計</span>
+      </div>
+      <div class="stat-item">
         <span class="stat-number">{{ filteredPendingTodos.length }}</span>
         <span class="stat-label">待完成</span>
       </div>
       <div class="stat-item">
         <span class="stat-number">{{ filteredCompletedTodos.length }}</span>
         <span class="stat-label">已完成</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number">{{ filteredTodos.length }}</span>
-        <span class="stat-label">總計</span>
       </div>
     </div>
 
