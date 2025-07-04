@@ -256,8 +256,11 @@ export default {
         })
       }
 
+      // 同時套用兩種排序方式: 先 ID 再 時間
       // 按照 ID 排序：ID 愈大的排在愈前面
-      const sortedTodos = todos.sort((a, b) => b.id - a.id)
+      const sortedTodos = todos
+        .sort((a, b) => b.id - a.id)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
 
       return sortedTodos
     },
@@ -406,7 +409,9 @@ export default {
     handleExportExcel () {
       try {
         // 按照 ID 排序：ID 愈大的排在愈前面
-        const sortedTodos = [...this.$store.state.todos.todos].sort((a, b) => b.id - a.id)
+        const sortedTodos = [...this.$store.state.todos.todos]
+          .sort((a, b) => b.id - a.id)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
 
         // 準備 Excel 資料
         const excelData = sortedTodos.map((todo, index) => [
