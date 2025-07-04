@@ -20,15 +20,15 @@
     <!-- 統計資訊 -->
     <div class="stats">
       <div class="stat-item">
-        <span class="stat-number">{{ pendingTodos.length }}</span>
+        <span class="stat-number">{{ filteredPendingTodos.length }}</span>
         <span class="stat-label">待完成</span>
       </div>
       <div class="stat-item">
-        <span class="stat-number">{{ completedTodos.length }}</span>
+        <span class="stat-number">{{ filteredCompletedTodos.length }}</span>
         <span class="stat-label">已完成</span>
       </div>
       <div class="stat-item">
-        <span class="stat-number">{{ allTodos.length }}</span>
+        <span class="stat-number">{{ filteredTodos.length }}</span>
         <span class="stat-label">總計</span>
       </div>
     </div>
@@ -225,6 +225,14 @@ export default {
       const sortedTodos = todos.sort((a, b) => b.id - a.id)
 
       return sortedTodos
+    },
+    // 篩選後的待完成項目
+    filteredPendingTodos () {
+      return this.filteredTodos.filter((todo) => !todo.isCompleted)
+    },
+    // 篩選後的已完成項目
+    filteredCompletedTodos () {
+      return this.filteredTodos.filter((todo) => todo.isCompleted)
     },
     currentMonthYear () {
       return `${this.currentDate.getFullYear()}年${this.currentDate.getMonth() + 1}月`
