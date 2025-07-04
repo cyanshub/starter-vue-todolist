@@ -113,6 +113,9 @@
       </div>
     </div>
 
+    <!-- 手機版新增按鈕 -->
+    <button @click="showAddForm = true" class="add-btn mobile-add-btn"><span>➕</span> 新增待辦事項</button>
+
     <!-- Todo 列表 -->
     <div class="todos-container">
       <div v-for="todo in filteredTodos" :key="todo.id" class="todo-item" :class="{ completed: todo.isCompleted }">
@@ -589,6 +592,11 @@ export default {
 .add-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(135, 206, 235, 0.3);
+}
+
+/* 手機版新增按鈕 - 預設隱藏 */
+.mobile-add-btn {
+  display: none;
 }
 
 .stats {
@@ -1268,10 +1276,18 @@ export default {
     padding: 4px 0;
   }
 
-  .add-btn {
+  /* 隱藏桌面版新增按鈕 */
+  .todo-header .add-btn {
+    display: none;
+  }
+
+  /* 顯示手機版新增按鈕 */
+  .mobile-add-btn {
+    display: flex !important;
     width: 100%;
     justify-content: center;
     padding: 15px 24px;
+    margin-bottom: 20px;
   }
 
   .stats {
