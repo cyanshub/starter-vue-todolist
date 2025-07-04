@@ -9,13 +9,15 @@
           <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
-          <p>✨ 待辦事項僅儲存於您的設備，無後端資料庫</p>
-          <p>✨ 點選重置資料將清空本地資料並恢復成 Demo 模式</p>
-          <p>✨ 可利用匯入/匯出 Excel 功能備份或還原資料</p>
-          <p>✨ 可自定義標籤，並選擇標籤決定要列出的事項</p>
+          <p>✨ 您的行動清單只會保存在您的裝置，只有自己看得到。</p>
+          <p>✨ 點選重置資料將清空本地資料並恢復成 Demo 模式。</p>
+          <p>✨ 可利用匯入/匯出 Excel 功能備份或還原資料。</p>
+          <p>✨ 可自定義標籤，並選擇標籤決定要列出的事項。</p>
         </div>
       </div>
-      <button @click="showAddForm = true" class="add-btn"><span>➕</span> 新增待辦事項</button>
+      <button @click="showAddForm = true" class="add-btn">
+        <span>➕</span> {{ filteredTodos.length === 0 ? '新增第一個待辦事項' : '新增待辦事項' }}
+      </button>
     </div>
 
     <!-- 統計資訊 -->
@@ -57,7 +59,7 @@
       <div class="date-filter-content">
         <label @click="showDatePicker = true" class="date-label clickable">
           <v-icon name="calendar-alt" scale="1" />
-          日期篩選
+          {{ dateFilter ? '從這天開始顯示' : '選擇從哪一天開始顯示' }}
         </label>
         <div class="date-input-group">
           <input
@@ -68,7 +70,7 @@
             v-model="dateFilter"
             @change="handleDateFilterChange"
             class="date-input"
-            placeholder="選擇指定日期之後的待辦事項"
+            placeholder="選擇起始日期"
           />
           <button v-if="dateFilter" @click="clearDateFilter" class="clear-date-btn" title="清除日期篩選">
             <v-icon name="times" scale="1" />
@@ -76,7 +78,7 @@
         </div>
       </div>
       <div v-if="dateFilter" class="date-filter-info">
-        <span>顯示 {{ dateFilter }} 之後的待辦事項</span>
+        <span>目前只顯示 {{ dateFilter }} 之後的待辦事項</span>
       </div>
     </div>
 
@@ -126,7 +128,9 @@
     </div>
 
     <!-- 手機版新增按鈕 -->
-    <button @click="showAddForm = true" class="add-btn mobile-add-btn"><span>➕</span> 新增待辦事項</button>
+    <button @click="showAddForm = true" class="add-btn mobile-add-btn">
+      <span>➕</span> {{ filteredTodos.length === 0 ? '新增第一個待辦事項' : '新增待辦事項' }}
+    </button>
 
     <!-- Todo 列表 -->
     <div class="todos-container">
@@ -184,7 +188,6 @@
       <div v-if="filteredTodos.length === 0" class="empty-state">
         <div class="empty-icon"><v-icon name="clipboard" scale="2" /></div>
         <p>目前沒有待辦事項</p>
-        <button @click="showAddForm = true" class="add-first-btn">新增第一個待辦事項</button>
       </div>
     </div>
 
