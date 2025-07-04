@@ -357,8 +357,11 @@ export default {
         isCompleted: false // 設定為未完成狀態
       }
 
-      // 添加新的待辦事項
-      this.addTodo(copiedTodo)
+      // 顯示複製確認對話框
+      if (confirm('確定要複製這個待辦事項嗎？')) {
+        // 添加新的待辦事項
+        this.addTodo(copiedTodo)
+      }
     },
 
     // 開啟編輯模式
@@ -491,8 +494,6 @@ export default {
 
               // 強制更新 Vue 響應式系統
               this.$forceUpdate()
-
-              alert('匯入成功！')
             }
           } catch (error) {
             console.error('匯入失敗：', error)
