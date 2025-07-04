@@ -18,7 +18,7 @@ export const todosDummy = [
     remarks: '記得帶水和毛巾，注意安全',
     time: 1.5,
     date: '2024-08-31',
-    location: '河濱公園',
+    location: '河濱公園: https://maps.app.goo.gl/zKjsHqZJrmy6y6vm6',
     tag: '#運動 #健康',
     isCompleted: false
   },
