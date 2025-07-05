@@ -43,7 +43,7 @@
         <div class="tag-select-container">
           <select v-model="selectedTag" @change="handleTagFilterChange" class="tag-select">
             <option value="">所有標籤</option>
-            <option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>
+            <option v-for="tag in availableTags" :key="tag" :value="tag">{{ truncateTag(tag) }}</option>
           </select>
         </div>
       </div>
@@ -180,7 +180,7 @@
           <div class="todo-tags" v-if="todo.tag">
             <span class="detail-icon"><v-icon name="tags" scale="1" /></span>
             <div class="tags-container">
-              <span v-for="tag in todo.tag.split(' ').filter((t) => t.trim())" :key="tag" class="tag-item">{{ tag }}</span>
+              <span v-for="tag in todo.tag.split(' ').filter((t) => t.trim())" :key="tag" class="tag-item">{{ truncateTag(tag) }}</span>
             </div>
           </div>
         </div>
@@ -193,7 +193,7 @@
     </div>
 
     <!-- 新增/編輯表單 -->
-    <TodoForm v-if="showAddForm || editingTodo" :todo="editingTodo" @close="closeForm" @save="saveTodo" />
+    <TodoForm v-if="showAddForm || editingTodo" :todo="editingTodo" :filtered-tags="availableTags" @close="closeForm" @save="saveTodo" />
   </div>
 </template>
 
@@ -344,6 +344,12 @@ export default {
         const displayText = url.length > 50 ? url.substring(0, 50) + '...' : url
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #1e3a8a; text-decoration: none; transition: all 0.3s ease; white-space: nowrap;" onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';" onmouseout="this.style.color='#1e3a8a'; this.style.textDecoration='none';" title="${url}">${displayText}</a>`
       })
+    },
+
+    // 截斷過長的標籤文字
+    truncateTag (tag) {
+      if (!tag) return ''
+      return tag.length > 13 ? tag.substring(0, 13) + '...' : tag
     },
 
     // 複製待辦事項

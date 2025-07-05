@@ -54,7 +54,17 @@
         </div>
 
         <div class="form-group">
-          <label for="tag">標籤</label>
+          <div class="tag-label-container">
+            <span class="tag-label">標籤</span>
+            <div v-if="filteredTags && filteredTags.length > 0" class="filtered-tags">
+              <span v-for="tag in limitedTags" :key="tag" @click="addTagToInput(tag)" class="filtered-tag" :title="`點擊加入 ${tag}`">
+                {{ tag }}
+              </span>
+              <span v-if="remainingTagsCount > 0" class="more-tags-indicator" :title="`還有 ${remainingTagsCount} 個標籤`">
+                +{{ remainingTagsCount }}
+              </span>
+            </div>
+          </div>
           <input id="tag" v-model="form.tag" type="text" placeholder="例如：#運動 #彈鋼琴 #練吉他 #爵士鼓（可選）" class="form-input" />
         </div>
 
@@ -76,6 +86,10 @@ export default {
     todo: {
       type: Object,
       default: null
+    },
+    filteredTags: {
+      type: Array,
+      default: () => []
     }
   },
   data () {
@@ -94,6 +108,12 @@ export default {
   computed: {
     isEditing () {
       return !!this.todo
+    },
+    limitedTags () {
+      return this.filteredTags ? this.filteredTags.slice(0, 12) : []
+    },
+    remainingTagsCount () {
+      return this.filteredTags ? Math.max(0, this.filteredTags.length - 12) : 0
     }
   },
   watch: {
@@ -150,6 +170,20 @@ export default {
     closeModal (event) {
       if (event.target.classList.contains('modal-overlay')) {
         this.$emit('close')
+      }
+    },
+
+    addTagToInput (tag) {
+      // 如果輸入框是空的，直接設置標籤
+      if (!this.form.tag || this.form.tag.trim() === '') {
+        this.form.tag = tag
+      } else {
+        // 如果已有標籤，檢查是否已經存在
+        const existingTags = this.form.tag.split(' ').filter((t) => t.trim() !== '')
+        if (!existingTags.includes(tag)) {
+          // 如果標籤不存在，則添加到末尾
+          this.form.tag = this.form.tag.trim() + ' ' + tag
+        }
       }
     }
   },
@@ -361,5 +395,61 @@ export default {
   .btn-cancel {
     order: 2;
   }
+}
+
+.tag-label-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tag-label {
+  color: #333;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.filtered-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filtered-tag {
+  background: rgba(255, 193, 7, 0.2);
+  color: #b8860b;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  font-weight: 500;
+}
+
+.filtered-tag:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 193, 7, 0.3);
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.2);
+}
+
+.filtered-tag:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.1);
+}
+
+.more-tags-indicator {
+  background: rgba(135, 206, 235, 0.2);
+  color: #87ceeb;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid rgba(135, 206, 235, 0.3);
+  cursor: default;
+  opacity: 0.8;
 }
 </style>
