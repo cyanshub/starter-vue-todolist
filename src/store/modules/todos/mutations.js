@@ -69,8 +69,12 @@ export default {
     // 重置為 dummy data
     state.todos = [...todosDummy]
     state.nextId = 994
-    // 清除 localStorage，不保存範例資料
+    // 清除 localStorage
+    // 不保存範例資料
     localStorage.removeItem('vue-todo-todos')
     localStorage.removeItem('vue-todo-nextId')
+
+    // 清除日期篩選
+    localStorage.removeItem('todoDateFilter')
   }
 }

@@ -168,7 +168,7 @@
             </div>
             <div class="detail-item" v-if="todo.location">
               <span class="detail-icon"><v-icon name="map-marker-alt" scale="1" /></span>
-              <span v-html="formatContent(todo.location)"></span>
+              <span v-html="formatContent(todo.location, false)"></span>
             </div>
           </div>
 
@@ -331,32 +331,50 @@ export default {
     // 第二個參數則是 actions 方法陣列
     ...mapActions('todos', ['addTodo', 'updateTodo', 'deleteTodo', 'toggleTodo', 'clearAllData']),
 
-    // 格式化內容，將 URL 轉換為可點擊的連結
-    formatContent (content) {
+    // 格式化內容，將 URL 轉換為可點擊的連結或圖片
+    formatContent (content, allowImages = true) {
       if (!content) return ''
 
       // 正則表達式匹配 http/https URL
       const urlRegex = /(https?:\/\/[^\s]+)/g
 
-      // 將 URL 替換為 HTML 連結，使用內嵌樣式定義暗藍色並限制顯示長度
+      // 圖片格式的正則表達式
+      const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif|ico)$/i
+
+      // 將 URL 替換為 HTML 連結或圖片，使用內嵌樣式定義暗藍色並限制顯示長度
       return content.replace(urlRegex, (url) => {
-        // 限制顯示長度為 50 個字元，超過則用省略符號
-        const displayText = url.length > 50 ? url.substring(0, 50) + '...' : url
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer"
-          style="
-            color: #5fb4d3;
-            text-decoration: none;
+        // 檢查是否為圖片 URL
+        if (imageExtensions.test(url) && allowImages) {
+          // 如果是圖片且允許顯示圖片，返回 img 元素
+          return `<img src="${url}" alt="圖片" style="
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 8px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
-            white-space: nowrap;
-          "
-          onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';"
-          onmouseout="this.style.color='#5fb4d3'; this.style.textDecoration='none';"
-          onfocus="this.style.outline='2px solid #cceffc';"
-          onblur="this.style.outline='none';"
-          onmousedown="this.style.color='#1e3a8a';"
-          onmouseup="this.style.color='#0f172a';"
-          title="${url}"
-        >${displayText}</a>`
+          " onerror="this.style.display='none';" />`
+        } else {
+          // 如果不是圖片，或是不允許顯示圖片，返回連結
+          // 限制顯示長度為 50 個字元，超過則用省略符號
+          const displayText = url.length > 50 ? url.substring(0, 50) + '...' : url
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer"
+            style="
+              color: #5fb4d3;
+              text-decoration: none;
+              transition: all 0.3s ease;
+              white-space: nowrap;
+            "
+            onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';"
+            onmouseout="this.style.color='#5fb4d3'; this.style.textDecoration='none';"
+            onfocus="this.style.outline='2px solid #cceffc';"
+            onblur="this.style.outline='none';"
+            onmousedown="this.style.color='#1e3a8a';"
+            onmouseup="this.style.color='#0f172a';"
+            title="${url}"
+          >${displayText}</a>`
+        }
       })
     },
 
@@ -421,6 +439,13 @@ export default {
     handleResetData () {
       if (confirm('確定要重置所有資料嗎？這將會清除所有自訂的待辦事項並恢復為範例資料。')) {
         this.clearAllData()
+        // 重置日期篩選
+        this.dateFilter = ''
+        this.selectedTag = ''
+        // 強制更新組件以確保 UI 刷新
+        this.$nextTick(() => {
+          this.$forceUpdate()
+        })
       }
     },
 
@@ -599,6 +624,12 @@ export default {
       } else {
         localStorage.removeItem('todoSelectedTag')
       }
+    },
+
+    // 清除標籤篩選
+    clearTagFilter () {
+      this.selectedTag = ''
+      localStorage.removeItem('todoSelectedTag')
     }
   }
 }
