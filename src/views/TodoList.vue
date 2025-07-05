@@ -421,6 +421,13 @@ export default {
     handleResetData () {
       if (confirm('確定要重置所有資料嗎？這將會清除所有自訂的待辦事項並恢復為範例資料。')) {
         this.clearAllData()
+        // 重置日期篩選
+        this.dateFilter = ''
+        this.selectedTag = ''
+        // 強制更新組件以確保 UI 刷新
+        this.$nextTick(() => {
+          this.$forceUpdate()
+        })
       }
     },
 
