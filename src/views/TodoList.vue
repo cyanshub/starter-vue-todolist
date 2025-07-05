@@ -342,7 +342,21 @@ export default {
       return content.replace(urlRegex, (url) => {
         // 限制顯示長度為 50 個字元，超過則用省略符號
         const displayText = url.length > 50 ? url.substring(0, 50) + '...' : url
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #1e3a8a; text-decoration: none; transition: all 0.3s ease; white-space: nowrap;" onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';" onmouseout="this.style.color='#1e3a8a'; this.style.textDecoration='none';" title="${url}">${displayText}</a>`
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer"
+          style="
+            color: #5fb4d3;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+          "
+          onmouseover="this.style.color='#0f172a'; this.style.textDecoration='underline';"
+          onmouseout="this.style.color='#5fb4d3'; this.style.textDecoration='none';"
+          onfocus="this.style.outline='2px solid #cceffc';"
+          onblur="this.style.outline='none';"
+          onmousedown="this.style.color='#1e3a8a';"
+          onmouseup="this.style.color='#0f172a';"
+          title="${url}"
+        >${displayText}</a>`
       })
     },
 
