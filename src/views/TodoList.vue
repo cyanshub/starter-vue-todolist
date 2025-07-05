@@ -9,11 +9,9 @@
           <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
-          <p>✨ 清單藏在這台裝置的小角落，只有寫下的人才看得見。</p>
-          <p>✨ 不過，只有熟悉的裝置與瀏覽器，才找得到它們唷！</p>
-          <p>✨ 點選重置資料將恢復成 Demo 模式。</p>
-          <p>✨ 可利用匯入/匯出 Excel 功能備份或還原資料。</p>
-          <p>✨ 可自定義標籤，並選擇標籤決定要列出的事項。</p>
+          <p>✨ 圖片支援: 只要貼上圖片網址，圖片就能自動顯示在清單中唷！</p>
+          <p>✨ 資料存放: 資料存在裝置內部，只有同一台裝置與瀏覽器看得見。</p>
+          <p>✨ 進階功能: 支援匯出 Excel、自訂標籤、重置為 Demo 模式。</p>
         </div>
       </div>
       <button @click="showAddForm = true" class="add-btn">
@@ -335,11 +333,12 @@ export default {
     formatContent (content, allowImages = true) {
       if (!content) return ''
 
-      // 正則表達式匹配 http/https URL
-      const urlRegex = /(https?:\/\/[^\s]+)/g
+      // 正則表達式匹配 http/https URL（包括以 @ 開頭的格式）和 Base64 圖片格式
+      const urlRegex = /(@?https?:\/\/[^\s]+|data:image\/[^;]+;base64,[^\s]+)/g
 
-      // 圖片格式的正則表達式
-      const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif|ico)$/i
+      // 圖片格式的正則表達式，支援帶有 query 參數的 URL 和 Base64 格式
+      const imageExtensions =
+        /(\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif|ico)(\?.*)?$|^data:image\/(png|jpeg|jpg|gif|bmp|webp|svg|tiff|tif|ico);base64,)/i
 
       // 將 URL 替換為 HTML 連結或圖片，使用內嵌樣式定義暗藍色並限制顯示長度
       return content.replace(urlRegex, (url) => {
@@ -1511,7 +1510,7 @@ export default {
 
 .detail-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 5px;
   font-size: 0.9rem;
   color: #666;

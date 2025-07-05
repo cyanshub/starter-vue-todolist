@@ -25,12 +25,23 @@ export const todosDummy = [
   {
     id: 993,
     name: '音樂時間：練習爵士鼓',
-    content: '練習基本的鼓點節奏\n網址: https://www.youtube.com',
+    content: '練習基本的鼓點節奏\n網址: https://www.youtube.com\nhttps://images.pexels.com/photos/995301/pexels-photo-995301.jpeg',
     remarks: '記得預約樂器行教室，帶鼓棒',
-    time: 2.5,
+    time: 1.5,
     date: '2024-08-31',
     location: '樂器行',
     tag: '#音樂 #爵士鼓',
+    isCompleted: false
+  },
+  {
+    id: 994,
+    name: '音樂時間：抓吉他譜',
+    content: '練習抓取吉他譜和彈奏吉他\nhttps://images.pexels.com/photos/7802291/pexels-photo-7802291.jpeg',
+    remarks: '記得調音、注意手腕姿勢、適時休息',
+    time: 1.5,
+    date: '2024-08-31',
+    location: '家裡',
+    tag: '#音樂 #吉他',
     isCompleted: false
   }
 ]
