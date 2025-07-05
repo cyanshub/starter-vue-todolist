@@ -17,8 +17,8 @@ const saveToLocalStorage = (todos, nextId) => {
 export default {
   ADD_TODO (state, todo) {
     // 如果是第一次新增用戶資料，先清除範例資料
-    if (state.todos.some(t => [991, 992, 993].includes(t.id))) {
-      state.todos = state.todos.filter(t => ![991, 992, 993].includes(t.id))
+    if (state.todos.some(t => [991, 992, 993, 994].includes(t.id))) {
+      state.todos = state.todos.filter(t => ![991, 992, 993, 994].includes(t.id))
     }
 
     // 直接使用傳入的 todo 物件（action 已經處理過了）

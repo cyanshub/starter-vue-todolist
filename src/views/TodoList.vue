@@ -9,9 +9,9 @@
           <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
-          <p>✨ 圖片支援: 只要貼上圖片網址，圖片就能自動顯示在清單中唷！</p>
-          <p>✨ 資料存放: 資料存在裝置內部，只有同一台裝置與瀏覽器看得見。</p>
-          <p>✨ 進階功能: 支援匯出 Excel、自訂標籤、重置為 Demo 模式。</p>
+          <p>✨ 只要貼上圖片網址，就能在待辦事項中顯示圖片！</p>
+          <p>✨ 資料存放在用戶端，只有同一台裝置與瀏覽器才看得見！</p>
+          <p>✨ 支援匯出/匯入、自訂標籤、重置為 Demo 模式等功能！</p>
         </div>
       </div>
       <button @click="showAddForm = true" class="add-btn">
@@ -133,7 +133,13 @@
 
     <!-- Todo 列表 -->
     <div class="todos-container">
-      <div v-for="todo in filteredTodos" :key="todo.id" class="todo-item" :class="{ completed: todo.isCompleted }">
+      <div
+        v-for="todo in filteredTodos"
+        :key="todo.id"
+        class="todo-item"
+        :class="{ completed: todo.isCompleted, collapsed: isCollapsed(todo.id) }"
+        :data-todo-id="todo.id"
+      >
         <div class="todo-content">
           <div class="todo-header-row">
             <div class="todo-title">
@@ -152,11 +158,21 @@
               </button>
             </div>
           </div>
-
-          <p class="todo-description" v-if="todo.content" v-html="formatContent(todo.content)"></p>
-
+          <div class="collapse-row" v-if="collapsedEligible[todo.id]">
+            <button class="collapse-button" @click="toggleCollapse(todo.id)">
+              <v-icon :name="isCollapsed(todo.id) ? 'plus-circle' : 'minus-circle'" scale="1" />
+              <span>{{ isCollapsed(todo.id) ? '查看更多' : '收合內容' }}</span>
+            </button>
+          </div>
+          <div class="todo-body">
+            <!-- 只摺疊描述內容 -->
+            <div v-if="todo.content" class="todo-description-wrapper" :class="{ collapsed: isCollapsed(todo.id) }">
+              <p class="todo-description" v-html="formatContent(todo.content)"></p>
+            </div>
+          </div>
+          <!-- 以下資訊永遠顯示，移到 todo-body 外面 -->
           <div class="todo-details">
-            <div class="detail-item">
+            <div class="detail-item" v-if="todo.date">
               <span class="detail-icon"><v-icon name="calendar-alt" scale="1" /></span>
               <span>{{ todo.date }}</span>
             </div>
@@ -169,12 +185,10 @@
               <span v-html="formatContent(todo.location, false)"></span>
             </div>
           </div>
-
           <div class="todo-remarks" v-if="todo.remarks">
             <span class="detail-icon"><v-icon name="sticky-note" scale="1" /></span>
             <span>{{ todo.remarks }}</span>
           </div>
-
           <div class="todo-tags" v-if="todo.tag">
             <span class="detail-icon"><v-icon name="tags" scale="1" /></span>
             <div class="tags-container">
@@ -212,32 +226,33 @@ export default {
       selectedTag: localStorage.getItem('todoSelectedTag') || '',
       showDatePicker: false,
       currentDate: new Date(),
-      weekdays: ['日', '一', '二', '三', '四', '五', '六']
+      weekdays: ['日', '一', '二', '三', '四', '五', '六'],
+      collapsedTodos: {},
+      collapsedEligible: {}
     }
   },
   computed: {
     // 將 Vuex 中的 getters 映射為 computed 屬性
-    // mapGetters 是 Vuex 的一個語法糖，用來「快速將 Vuex 的 getters 映射到組件的 computed 屬性中」，這樣你就可以直接在組件裡使用 this.allTodos 之類的語法了，不需要自己一筆筆寫
-
+    // mapGetters 是 Vuex 的一個語法糖，用來「快速將 Vuex 的 getters 映射到組件的 computed 屬性中」
     // 如果是模組化的情況
-    // 則需要在第一個參數指定模組名稱
-    // 第二個參數則是 getters 方法陣列
+    // 副屬需要傳 module 名稱
+    // 副屬還是要傳 getters 方法數列
     ...mapGetters('todos', ['allTodos', 'completedTodos', 'pendingTodos']),
 
     // 根據篩選條件回傳對應的待辦清單
     filteredTodos () {
-      // 直接從 Vuex state 獲取原始資料，避免 getters 的排序干擾
+      // 直接從 Vuex state 讀取原始資料，避免 getters 的排序干擾
       const allTodos = this.$store.state.todos.todos
-
       // 根據篩選條件篩選
       let todos = allTodos
       if (this.currentFilter === 'completed') {
+        // 只顯示已完成
         todos = allTodos.filter((todo) => todo.isCompleted)
       } else if (this.currentFilter === 'pending') {
+        // 只顯示未完成
         todos = allTodos.filter((todo) => !todo.isCompleted)
       }
-
-      // 根據日期篩選
+      // 日期篩選（只顯示指定日期之後的待辦）
       if (this.dateFilter) {
         todos = todos.filter((todo) => {
           const todoDate = new Date(todo.date)
@@ -245,38 +260,38 @@ export default {
           return todoDate >= filterDate
         })
       }
-
-      // 根據標籤篩選
+      // 標籤篩選（只顯示包含指定標籤的待辦）
       if (this.selectedTag) {
         todos = todos.filter((todo) => {
           if (!todo.tag) return false
+          // 支援多標籤分割
           const tags = todo.tag.split(' ').map((tag) => tag.trim())
           return tags.includes(this.selectedTag)
         })
       }
-
-      // 同時套用兩種排序方式: 先 ID 再 時間
-      // 按照 ID 排序：ID 愈大的排在愈前面
+      // 先依 id 再依日期排序（新到舊，日期新者優先）
       const sortedTodos = todos.sort((a, b) => b.id - a.id).sort((a, b) => new Date(b.date) - new Date(a.date))
-
       return sortedTodos
     },
-    // 篩選後的待完成項目
+    // 篩選出未完成的待辦清單（僅顯示未完成）
     filteredPendingTodos () {
       return this.filteredTodos.filter((todo) => !todo.isCompleted)
     },
-    // 篩選後的已完成項目
+    // 篩選出已完成的待辦清單（僅顯示已完成）
     filteredCompletedTodos () {
       return this.filteredTodos.filter((todo) => todo.isCompleted)
     },
+    // 目前顯示的年月（給日期選擇器用，格式：2024年7月）
     currentMonthYear () {
       return `${this.currentDate.getFullYear()}年${this.currentDate.getMonth() + 1}月`
     },
+    // 產生日曆格子資料（含本月與前後補齊的日期，支援選取與高亮今日）
     calendarDays () {
       const year = this.currentDate.getFullYear()
       const month = this.currentDate.getMonth()
       const firstDay = new Date(year, month, 1)
       const startDate = new Date(firstDay)
+      // 以本月第一天為基準，往前補到本週日
       startDate.setDate(startDate.getDate() - firstDay.getDay())
 
       const days = []
@@ -286,6 +301,7 @@ export default {
         const date = new Date(startDate)
         date.setDate(startDate.getDate() + i)
 
+        // 判斷是否為本月、是否選取、是否為今日
         const isOtherMonth = date.getMonth() !== month
         const isSelected = this.dateFilter && date.toISOString().split('T')[0] === this.dateFilter
         const isToday = date.toDateString() === today.toDateString()
@@ -302,49 +318,46 @@ export default {
 
       return days
     },
-    // 可用的標籤列表
+    // 目前所有可用的標籤（依據篩選後的清單動態產生，去重排序）
     availableTags () {
-      // 使用當前篩選後的待辦事項來提取標籤
       const filteredTodos = this.filteredTodos
       const tagSet = new Set()
 
       filteredTodos.forEach((todo) => {
         if (todo.tag) {
-          // 分割標籤並清理空白
+          // 支援多標籤分割與去除空白
           const tags = todo.tag.split(' ').filter((tag) => tag.trim() !== '')
           tags.forEach((tag) => tagSet.add(tag.trim()))
         }
       })
 
-      // 轉換為陣列並排序
+      // 轉為陣列並排序
       return Array.from(tagSet).sort()
     }
   },
   methods: {
     // 將 Vuex 中的 actions 映射為本地方法
-    // mapActions 是 Vuex 的另一個語法糖，用來「快速將 Vuex 的 actions 映射到組件的 methods 中」，這樣你就可以直接在組件裡使用 this.addTodo() 之類的語法了，不需要自己一筆筆寫
-
+    // mapActions 是 Vuex 的另一個語法糖，用來「快速將 Vuex 的 actions 映射到組件的 methods 中」
     // 如果是模組化的情況
-    // 則需要在第一個參數指定模組名稱
-    // 第二個參數則是 actions 方法陣列
+    // 副屬需要傳 module 名稱
+    // 副屬需要傳參數或直接複製名稱
+    // 副屬需要傳 actions 方法或數列
     ...mapActions('todos', ['addTodo', 'updateTodo', 'deleteTodo', 'toggleTodo', 'clearAllData']),
 
-    // 格式化內容，將 URL 轉換為可點擊的連結或圖片
+    // 格式化內容，將 URL 轉換為可點擊連結或圖片
     formatContent (content, allowImages = true) {
       if (!content) return ''
-
-      // 正則表達式匹配 http/https URL（包括以 @ 開頭的格式）和 Base64 圖片格式
+      // 正則表達式匹配 http/https URL（包含以 @ 開頭的格式）和 Base64 圖片格式
       const urlRegex = /(@?https?:\/\/[^\s]+|data:image\/[^;]+;base64,[^\s]+)/g
-
       // 圖片格式的正則表達式，支援帶有 query 參數的 URL 和 Base64 格式
       const imageExtensions =
         /(\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif|ico)(\?.*)?$|^data:image\/(png|jpeg|jpg|gif|bmp|webp|svg|tiff|tif|ico);base64,)/i
-
-      // 將 URL 替換為 HTML 連結或圖片，使用內嵌樣式定義暗藍色並限制顯示長度
+      // 例外規則：只要網址 path 結尾是 /image 或 /images（不論有無 query/hash）
+      const imageApiPattern = /\/images?(\?|#|$)/i
+      // 逐一替換網址
       return content.replace(urlRegex, (url) => {
-        // 檢查是否為圖片 URL
-        if (imageExtensions.test(url) && allowImages) {
-          // 如果是圖片且允許顯示圖片，返回 img 元素
+        if ((imageExtensions.test(url) || imageApiPattern.test(url)) && allowImages) {
+          // 轉為圖片
           return `<img src="${url}" alt="圖片" style="
             width: 100%;
             height: auto;
@@ -355,8 +368,7 @@ export default {
             transition: all 0.3s ease;
           " onerror="this.style.display='none';" />`
         } else {
-          // 如果不是圖片，或是不允許顯示圖片，返回連結
-          // 限制顯示長度為 50 個字元，超過則用省略符號
+          // 轉為超連結，過長自動截斷
           const displayText = url.length > 50 ? url.substring(0, 50) + '...' : url
           return `<a href="${url}" target="_blank" rel="noopener noreferrer"
             style="
@@ -377,33 +389,28 @@ export default {
       })
     },
 
-    // 截斷過長的標籤文字
+    // 標籤過長時自動截斷顯示（最多 13 字）
     truncateTag (tag) {
       if (!tag) return ''
       return tag.length > 13 ? tag.substring(0, 13) + '...' : tag
     },
 
-    // 複製待辦事項
+    // 複製一筆待辦事項，日期設為今天、id 重新產生
     copyTodo (todo) {
-      // 獲取當前日期
       const today = this.getTaipeiDateString()
-
-      // 創建複製的待辦事項，移除 id 並設定新的屬性
+      // 產生新物件，id undefined 讓 store 自動分配
       const copiedTodo = {
         ...todo,
-        id: undefined, // 移除 id，讓系統自動生成新的 id
-        date: today, // 設定為今天的日期
-        isCompleted: false // 設定為未完成狀態
+        id: undefined,
+        date: today,
+        isCompleted: false
       }
-
-      // 顯示複製確認對話框
       if (confirm('確定要複製這個待辦事項嗎？')) {
-        // 添加新的待辦事項
         this.addTodo(copiedTodo)
       }
     },
 
-    // 開啟編輯模式
+    // 編輯待辦事項
     editTodo (todo) {
       this.editingTodo = { ...todo }
     },
@@ -414,44 +421,48 @@ export default {
       this.editingTodo = null
     },
 
-    // 儲存待辦（新增或編輯）
+    // 儲存待辦事項（新增或編輯）
     saveTodo (todoData) {
       if (this.editingTodo) {
-        this.updateTodo({
-          id: this.editingTodo.id,
-          ...todoData
-        })
+        this.updateTodo({ ...this.editingTodo, ...todoData })
       } else {
         this.addTodo(todoData)
       }
       this.closeForm()
+      this.checkAllTodoHeights()
     },
 
-    // 刪除待辦
+    // 更新待辦事項
+    updateTodo (todoData) {
+      this.$store.dispatch('todos/updateTodo', todoData)
+      this.checkAllTodoHeights()
+    },
+
+    // 刪除待辦事項
     async handleDeleteTodo (id) {
       if (confirm('確定要刪除這個待辦事項嗎？')) {
         this.deleteTodo(id)
       }
     },
 
-    // 重置資料
+    // 重置所有資料
     handleResetData () {
       if (confirm('確定要重置所有資料嗎？這將會清除所有自訂的待辦事項並恢復為範例資料。')) {
         this.clearAllData()
         // 重置日期篩選
         this.dateFilter = ''
         this.selectedTag = ''
-        // 強制更新組件以確保 UI 刷新
+        // 強制更新 Vue 的 UI 顯示
         this.$nextTick(() => {
           this.$forceUpdate()
         })
       }
     },
 
-    // 獲取台北時間的日期格式 (YYYY-MM-DD)
+    // 取得台北時間日期字串 (YYYY-MM-DD)
     getTaipeiDateString () {
       const now = new Date()
-      // 台北時區是 UTC+8
+      // 轉換為 UTC+8
       const taipeiTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
       return taipeiTime.toISOString().split('T')[0]
     },
@@ -459,7 +470,7 @@ export default {
     // 匯出 Excel
     handleExportExcel () {
       try {
-        // 按照 ID 排序：ID 愈大的排在愈前面
+        // 先按 ID 再按日期排序
         const sortedTodos = [...this.$store.state.todos.todos]
           .sort((a, b) => b.id - a.id)
           .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -485,7 +496,7 @@ export default {
         const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10]
         ws['!cols'] = colWidths.map((width) => ({ width }))
 
-        // 加入工作簿並下載
+        // 新增工作表到工作簿
         XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
         const fileName = `今日待辦帖_${this.getTaipeiDateString()}.xlsx`
         XLSX.writeFile(wb, fileName)
@@ -499,7 +510,7 @@ export default {
 
     // 匯入 Excel
     handleImportExcel () {
-      // 創建隱藏的檔案輸入元素
+      // 建立檔案選擇器
       const fileInput = document.createElement('input')
       fileInput.type = 'file'
       fileInput.accept = '.xlsx,.xls'
@@ -518,14 +529,14 @@ export default {
             const worksheet = workbook.Sheets[sheetName]
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
 
-            // 跳過標題行，處理資料行
+            // 轉換資料格式
             const importedTodos = jsonData.slice(1).map((row, index) => {
-              // 解析狀態欄位（標籤欄位後移一位）
+              // 檢查狀態欄位的完成狀態
               const statusText = row[8] || ''
               const isCompleted = statusText === '已完成'
 
               return {
-                id: Date.now() + (jsonData.length - 1 - index), // 顛倒 ID 順序
+                id: Date.now() + (jsonData.length - 1 - index), // 生成唯一 ID
                 date: row[1] || this.getTaipeiDateString(),
                 name: row[2] || '',
                 content: row[3] || null,
@@ -542,13 +553,13 @@ export default {
               // 清除現有資料
               this.clearAllData()
 
-              // 逐個添加匯入的待辦事項
+              // 逐一新增匯入的待辦事項
               importedTodos.forEach((todo) => {
-                // 直接傳遞包含 isCompleted 的完整 todo 物件
+                // 確保 isCompleted 狀態正確傳遞
                 this.addTodo(todo)
               })
 
-              // 強制更新 Vue 響應式系統
+              // 強制更新 Vue 的 UI 顯示
               this.$forceUpdate()
             }
           } catch (error) {
@@ -560,7 +571,7 @@ export default {
         reader.readAsArrayBuffer(file)
       }
 
-      // 觸發檔案選擇
+      // 觸發檔案選擇器
       document.body.appendChild(fileInput)
       fileInput.click()
       document.body.removeChild(fileInput)
@@ -568,7 +579,7 @@ export default {
 
     // 處理日期篩選變更
     handleDateFilterChange () {
-      // 保存到 localStorage
+      // 儲存到 localStorage
       if (this.dateFilter) {
         localStorage.setItem('todoDateFilter', this.dateFilter)
       } else {
@@ -582,7 +593,7 @@ export default {
       localStorage.removeItem('todoDateFilter')
     },
 
-    // 日期選擇器方法
+    // 選擇日期
     selectDate (day) {
       if (day.otherMonth) return
       this.dateFilter = day.date
@@ -590,6 +601,7 @@ export default {
       this.closeDatePicker()
     },
 
+    // 選擇今天
     selectToday () {
       const today = this.getTaipeiDateString()
       this.dateFilter = today
@@ -597,27 +609,31 @@ export default {
       this.closeDatePicker()
     },
 
+    // 清除日期
     clearDate () {
       this.dateFilter = ''
       localStorage.removeItem('todoDateFilter')
       this.closeDatePicker()
     },
 
+    // 上個月
     previousMonth () {
       this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1)
     },
 
+    // 下個月
     nextMonth () {
       this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1)
     },
 
+    // 關閉日期選擇器
     closeDatePicker () {
       this.showDatePicker = false
     },
 
     // 處理標籤篩選變更
     handleTagFilterChange () {
-      // 保存到 localStorage
+      // 儲存到 localStorage
       if (this.selectedTag) {
         localStorage.setItem('todoSelectedTag', this.selectedTag)
       } else {
@@ -629,7 +645,45 @@ export default {
     clearTagFilter () {
       this.selectedTag = ''
       localStorage.removeItem('todoSelectedTag')
+    },
+
+    checkAllTodoHeights () {
+      this.$nextTick(() => {
+        this.filteredTodos.forEach((todo) => {
+          const todoElement = document.querySelector(`[data-todo-id="${todo.id}"]`)
+          if (todoElement) {
+            const descWrapper = todoElement.querySelector('.todo-description-wrapper')
+            if (descWrapper) {
+              descWrapper.querySelectorAll('img').forEach((img) => {
+                img.onload = () => this.checkAllTodoHeights()
+              })
+              const scrollHeight = descWrapper.scrollHeight
+              this.$set(this.collapsedEligible, todo.id, scrollHeight > 600)
+              if (scrollHeight > 600) {
+                this.$set(this.collapsedTodos, todo.id, true)
+              }
+            }
+          }
+        })
+      })
+    },
+
+    toggleCollapse (todoId) {
+      this.$set(this.collapsedTodos, todoId, !this.isCollapsed(todoId))
+    },
+
+    isCollapsed (todoId) {
+      return !!this.collapsedTodos[todoId]
+    },
+
+    shouldShowCollapseButton (todoId) {
+      return this.isCollapsed(todoId) || this.collapsedTodos.has(todoId)
     }
+  },
+  mounted () {
+    this.checkAllTodoHeights()
+    setTimeout(() => this.checkAllTodoHeights(), 300)
+    setTimeout(() => this.checkAllTodoHeights(), 1000)
   }
 }
 </script>
@@ -1393,13 +1447,16 @@ export default {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(135, 206, 235, 0.2);
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .todo-item.completed {
   opacity: 0.7;
   background: rgba(135, 206, 235, 0.15);
   border-color: rgba(135, 206, 235, 0.3);
-  transform: scale(0.98);
+  /* 移除 transform: scale(0.98) 避免影響高度和間距 */
+  /* 用 filter 來增加視覺差異，但不會影響佈局 */
+  filter: grayscale(0.3);
 }
 
 .todo-item.completed .todo-description {
@@ -1480,13 +1537,18 @@ export default {
 }
 
 .todo-description {
-  margin: 10px 0;
+  margin-bottom: 0;
   color: #666;
   line-height: 1.5;
-  white-space: pre-wrap;
+  white-space: pre-line;
   word-wrap: break-word;
   overflow-wrap: break-word;
   word-break: break-all;
+}
+.todo-body,
+.todo-content {
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .todo-description a {
@@ -1499,6 +1561,13 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.todo-details,
+.todo-remarks,
+.todo-tags {
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .todo-details {
@@ -1795,5 +1864,80 @@ export default {
   .empty-icon {
     font-size: 3rem;
   }
+}
+
+/* 只摺疊內容，不摺疊按鈕 */
+.todo-item .todo-body {
+  transition: max-height 0.3s;
+}
+.todo-item.collapsed .todo-body {
+  max-height: 300px !important;
+  overflow: hidden !important;
+  position: relative;
+}
+.todo-item.collapsed .todo-body::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* collapse-button 調整為 action-btn 風格 */
+.collapse-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #87ceeb;
+  font-size: 1rem;
+  background: none;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: background 0.2s, color 0.2s;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(135, 206, 235, 0.08);
+}
+.collapse-button:hover {
+  background: rgba(135, 206, 235, 0.18);
+  color: #b0c4de;
+}
+
+.collapse-row {
+  position: absolute;
+  top: 42px;
+  right: 8px;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  background: none;
+  pointer-events: auto;
+}
+
+/* 只摺疊描述內容 */
+.todo-description-wrapper {
+  margin-bottom: 8px;
+}
+.todo-description-wrapper.collapsed {
+  max-height: 300px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 8px;
+}
+.todo-description-wrapper.collapsed::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 </style>
