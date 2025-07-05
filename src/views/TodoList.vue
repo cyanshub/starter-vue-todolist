@@ -9,8 +9,9 @@
           <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
-          <p>✨ 您的行動清單只會保存在您的裝置，只有自己看得到。</p>
-          <p>✨ 點選重置資料將清空本地資料並恢復成 Demo 模式。</p>
+          <p>✨ 清單藏在這台裝置的小角落，只有寫下的人才看得見。</p>
+          <p>✨ 不過，只有熟悉的裝置與瀏覽器，才找得到它們唷！</p>
+          <p>✨ 點選重置資料將恢復成 Demo 模式。</p>
           <p>✨ 可利用匯入/匯出 Excel 功能備份或還原資料。</p>
           <p>✨ 可自定義標籤，並選擇標籤決定要列出的事項。</p>
         </div>
