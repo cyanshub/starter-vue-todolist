@@ -385,7 +385,7 @@ export default {
           " onerror="this.style.display='none';" />`
         } else {
           // 轉為超連結，過長自動截斷
-          const displayText = url.length > 50 ? url.substring(0, 50) + '...' : url
+          const displayText = url.length > 42 ? url.substring(0, 42) + '...' : url
           return `<a href="${url}" target="_blank" rel="noopener noreferrer"
             style="
               color: #5fb4d3;
