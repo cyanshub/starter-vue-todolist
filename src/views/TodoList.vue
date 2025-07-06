@@ -175,7 +175,7 @@
           <div class="todo-details">
             <div class="detail-item" v-if="todo.date">
               <span class="detail-icon"><v-icon name="calendar-alt" scale="1" /></span>
-              <span>{{ todo.date }}</span>
+              <span>{{ formatDateWithWeekday(todo.date) }}</span>
             </div>
             <div class="detail-item" v-if="todo.time">
               <span class="detail-icon"><v-icon name="clock" scale="1" /></span>
@@ -490,6 +490,13 @@ export default {
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
+    },
+
+    // 格式化日期並顯示星期幾
+    formatDateWithWeekday (dateString) {
+      const date = new Date(dateString)
+      const weekday = this.weekdays[date.getDay()]
+      return `${dateString} (${weekday})`
     },
 
     // 匯出 Excel
@@ -1532,8 +1539,8 @@ export default {
 
 .todo-details {
   display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
+  flex-direction: column;
+  gap: 8px;
   margin: 15px 0;
 }
 
