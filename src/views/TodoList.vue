@@ -207,6 +207,53 @@
 
     <!-- 新增/編輯表單 -->
     <TodoForm v-if="showAddForm || editingTodo" :todo="editingTodo" :filtered-tags="availableTags" @close="closeForm" @save="saveTodo" />
+
+    <!-- 匯出對話視窗 -->
+    <div v-if="showExportDialog" class="export-dialog-overlay" @click="closeExportDialog">
+      <div class="export-dialog-modal" @click.stop>
+        <div class="export-dialog-header">
+          <h3>匯出 Excel</h3>
+          <button @click="closeExportDialog" class="close-btn">
+            <v-icon name="times" scale="1.2" />
+          </button>
+        </div>
+
+        <div class="export-dialog-content">
+          <div class="export-option">
+            <label class="radio-label">
+              <input type="radio" v-model="exportType" value="all" class="radio-input" />
+              <span class="radio-custom"></span>
+              <span class="radio-text">匯出全部：將所有待辦事項全部匯出</span>
+            </label>
+          </div>
+
+          <div class="export-option">
+            <label class="radio-label">
+              <input type="radio" v-model="exportType" value="tags" class="radio-input" />
+              <span class="radio-custom"></span>
+              <span class="radio-text">匯出標籤事項：僅匯出指定標籤的事項</span>
+            </label>
+          </div>
+
+          <div v-if="exportType === 'tags'" class="tags-input-section">
+            <label for="exportTags" class="input-label">標籤</label>
+            <input
+              id="exportTags"
+              v-model="exportTags"
+              type="text"
+              class="tags-input"
+              placeholder="請指定要匯出的標籤，例如：#運動 #音樂"
+            />
+            <div class="input-hint">請使用 # 字號作為標籤的開頭與間隔</div>
+          </div>
+        </div>
+
+        <div class="export-dialog-footer">
+          <button @click="closeExportDialog" class="cancel-btn">取消</button>
+          <button @click="confirmExport" class="confirm-btn confirm-right">確定匯出</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -229,7 +276,11 @@ export default {
       currentDate: new Date(),
       weekdays: ['日', '一', '二', '三', '四', '五', '六'],
       collapsedTodos: {},
-      collapsedEligible: {}
+      collapsedEligible: {},
+      // 匯出對話視窗狀態
+      showExportDialog: false,
+      exportType: 'all', // 'all' 或 'tags'
+      exportTags: ''
     }
   },
   computed: {
@@ -499,49 +550,112 @@ export default {
       return `${dateString} (${weekday})`
     },
 
-    // 匯出 Excel
+    // 顯示匯出對話視窗
     handleExportExcel () {
+      this.showExportDialog = true
+    },
+
+    // 確認匯出
+    confirmExport () {
+      if (this.exportType === 'tags' && !this.exportTags.trim()) {
+        alert('請輸入要匯出的標籤')
+        return
+      }
+
       try {
-        // 先按 ID 再按日期排序
-        const sortedTodos = [...this.$store.state.todos.todos]
-          .sort((a, b) => b.id - a.id)
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
+        if (this.exportType === 'all') {
+          this.exportAllTodos()
+        } else {
+          this.exportTodosByTags()
+        }
 
-        // 準備 Excel 資料
-        const excelData = sortedTodos.map((todo, index) => [
-          index + 1, // 序號
-          todo.date,
-          todo.name,
-          todo.content || '',
-          todo.time || '',
-          todo.location || '',
-          todo.remarks || '',
-          todo.tag || '',
-          todo.isCompleted ? '已完成' : '未完成',
-          todo.isLater ? '晚點再說' : '列入排程'
-        ])
-
-        // 建立工作簿
-        const wb = XLSX.utils.book_new()
-        const ws = XLSX.utils.aoa_to_sheet([
-          ['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '標籤', '狀態', '處理時機'],
-          ...excelData
-        ])
-
-        // 設定欄寬
-        const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10, 12]
-        ws['!cols'] = colWidths.map((width) => ({ width }))
-
-        // 新增工作表到工作簿
-        XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
-        const fileName = `今日待辦帖_${this.getTaipeiDateString()}.xlsx`
-        XLSX.writeFile(wb, fileName)
-
-        alert('匯出成功！')
+        this.closeExportDialog()
       } catch (error) {
         console.error('匯出失敗：', error)
         alert('匯出失敗，請稍後再試')
       }
+    },
+
+    // 關閉匯出對話視窗
+    closeExportDialog () {
+      this.showExportDialog = false
+      this.exportType = 'all'
+      this.exportTags = ''
+    },
+
+    // 匯出全部待辦事項
+    exportAllTodos () {
+      // 先按 ID 再按日期排序
+      const sortedTodos = [...this.$store.state.todos.todos].sort((a, b) => b.id - a.id).sort((a, b) => new Date(b.date) - new Date(a.date))
+
+      this.generateExcelFile(sortedTodos, '匯出全部')
+    },
+
+    // 根據標籤匯出待辦事項
+    exportTodosByTags () {
+      // 使用正則表達式分割標籤，支援空格分隔和連在一起的標籤
+      const tagArray =
+        this.exportTags.match(/#[^\s#]+/g) ||
+        [] // 匹配所有 # 開頭的標籤
+          .map((tag) => tag.trim())
+          .filter((tag) => tag)
+      const allTodos = this.$store.state.todos.todos
+
+      // 篩選包含指定標籤的待辦事項
+      const filteredTodos = allTodos.filter((todo) => {
+        if (!todo.tag) return false
+        const todoTags = todo.tag.split(' ').map((tag) => tag.trim())
+        return tagArray.some((tag) => todoTags.includes(tag))
+      })
+
+      if (filteredTodos.length === 0) {
+        alert('沒有找到包含指定標籤的待辦事項')
+        return
+      }
+
+      // 先按 ID 再按日期排序
+      const sortedTodos = filteredTodos.sort((a, b) => b.id - a.id).sort((a, b) => new Date(b.date) - new Date(a.date))
+
+      // 生成檔名（移除 # 符號）
+      const tagNames = tagArray.map((tag) => tag.replace('#', '')).join('_')
+      this.generateExcelFile(sortedTodos, `匯出指定標籤_${tagNames}`)
+    },
+
+    // 生成 Excel 檔案
+    generateExcelFile (todos, suffix) {
+      // 準備 Excel 資料
+      const excelData = todos.map((todo, index) => [
+        index + 1, // 序號
+        todo.date,
+        todo.name,
+        todo.content || '',
+        todo.time || '',
+        todo.location || '',
+        todo.remarks || '',
+        todo.tag || '',
+        todo.isCompleted ? '已完成' : '未完成',
+        todo.isLater ? '晚點再說' : '列入排程'
+      ])
+
+      // 建立工作簿
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet([
+        ['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '標籤', '狀態', '處理時機'],
+        ...excelData
+      ])
+
+      // 設定欄寬
+      const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10, 12]
+      ws['!cols'] = colWidths.map((width) => ({ width }))
+
+      // 新增工作表到工作簿
+      XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
+
+      // 生成檔名
+      const fileName = `今日待辦帖_${this.getTaipeiDateString()}_${suffix}.xlsx`
+      XLSX.writeFile(wb, fileName)
+
+      alert(`匯出成功！共匯出 ${todos.length} 個待辦事項`)
     },
 
     // 匯入 Excel
@@ -1915,5 +2029,230 @@ export default {
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 100%);
   pointer-events: none;
   z-index: 1;
+}
+
+/* 匯出對話視窗樣式 */
+.export-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.export-dialog-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.export-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.export-dialog-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.export-dialog-header .close-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.export-dialog-header .close-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.export-dialog-content {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.export-option {
+  margin-bottom: 16px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.radio-label:hover {
+  background: #f3f4f6;
+}
+
+.radio-input {
+  display: none;
+}
+
+.radio-custom {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  margin-right: 12px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.radio-input:checked + .radio-custom {
+  border-color: #87ceeb;
+  background: #87ceeb;
+}
+
+.radio-input:checked + .radio-custom::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+}
+
+.radio-text {
+  font-size: 1rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.tags-input-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.tags-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.tags-input:focus {
+  outline: none;
+  border-color: #87ceeb;
+  box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.1);
+}
+
+.tags-input::placeholder {
+  color: #9ca3af;
+}
+
+.input-hint {
+  margin-top: 8px;
+  padding: 0 4px;
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.export-dialog-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  flex-direction: row;
+}
+.confirm-right {
+  margin-left: auto;
+}
+
+.cancel-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 2px solid #d1d5db;
+  background: white;
+  color: #374151;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cancel-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+.confirm-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: #87ceeb;
+  color: white;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.confirm-btn:hover {
+  background: #5fb4d3;
+  box-shadow: 0 4px 12px rgba(135, 206, 235, 0.3);
+}
+.confirm-btn:active {
+  background: #5fb4d3;
+}
+.confirm-right {
+  margin-left: auto;
+}
+@media (max-width: 768px) {
+  .export-dialog-footer {
+    padding: 16px 20px;
+    flex-direction: column-reverse;
+  }
+  .confirm-right {
+    margin-left: 0;
+    margin-bottom: 10px;
+  }
+  .cancel-btn,
+  .confirm-btn {
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
 }
 </style>
