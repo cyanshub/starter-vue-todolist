@@ -54,6 +54,20 @@
         </div>
 
         <div class="form-group">
+          <label>處理時機</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" v-model="form.isLater" :value="false" class="radio-input" />
+              <span class="radio-text">列入排程</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" v-model="form.isLater" :value="true" class="radio-input" />
+              <span class="radio-text">晚點再說</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
           <div class="tag-label-container">
             <span class="tag-label">標籤</span>
             <div v-if="filteredTags && filteredTags.length > 0" class="filtered-tags">
@@ -101,7 +115,8 @@ export default {
         time: '1',
         location: '',
         remarks: '',
-        tag: ''
+        tag: '',
+        isLater: false
       }
     }
   },
@@ -145,7 +160,8 @@ export default {
         time: '1',
         location: '',
         remarks: '',
-        tag: ''
+        tag: '',
+        isLater: false
       }
     },
 
@@ -157,7 +173,8 @@ export default {
         time: this.form.time || null,
         location: (this.form.location || '').trim() || null,
         remarks: (this.form.remarks || '').trim() || null,
-        tag: (this.form.tag || '').trim() || null
+        tag: (this.form.tag || '').trim() || null,
+        isLater: this.form.isLater
       }
 
       if (this.isEditing && this.todo) {
@@ -451,5 +468,33 @@ export default {
   border: 1px solid rgba(135, 206, 235, 0.3);
   cursor: default;
   opacity: 0.8;
+}
+
+.form-textarea:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.radio-group {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio-input {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.radio-text {
+  font-size: 14px;
+  color: #333;
 }
 </style>

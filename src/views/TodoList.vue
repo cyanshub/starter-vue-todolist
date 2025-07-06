@@ -11,7 +11,7 @@
         <div class="tips">
           <p>✨ 只要貼上圖片網址，就能在待辦事項中顯示圖片！</p>
           <p>✨ 資料存放在用戶端，只有同一台裝置與瀏覽器才看得見！</p>
-          <p>✨ 支援匯出/匯入、自訂標籤、重置為 Demo 模式等功能！</p>
+          <p>✨ 支援 Excel 匯入/匯出、自定義標籤、Demo 重置等功能！</p>
         </div>
       </div>
       <button @click="showAddForm = true" class="add-btn">
@@ -22,7 +22,7 @@
     <!-- 統計資訊 -->
     <div class="stats">
       <div class="stat-item">
-        <span class="stat-number">{{ filteredTodos.length }}</span>
+        <span class="stat-number">{{ totalTodosExcludingLater }}</span>
         <span class="stat-label">總計</span>
       </div>
       <div class="stat-item">
@@ -50,6 +50,7 @@
         <button @click="currentFilter = 'all'" :class="{ active: currentFilter === 'all' }" class="filter-btn">全部</button>
         <button @click="currentFilter = 'pending'" :class="{ active: currentFilter === 'pending' }" class="filter-btn">待完成</button>
         <button @click="currentFilter = 'completed'" :class="{ active: currentFilter === 'completed' }" class="filter-btn">已完成</button>
+        <button @click="currentFilter = 'later'" :class="{ active: currentFilter === 'later' }" class="filter-btn">晚點再說</button>
       </div>
     </div>
 
@@ -243,14 +244,21 @@ export default {
     filteredTodos () {
       // 直接從 Vuex state 讀取原始資料，避免 getters 的排序干擾
       const allTodos = this.$store.state.todos.todos
-      // 根據篩選條件篩選
       let todos = allTodos
+
+      // 根據當前篩選條件篩選
       if (this.currentFilter === 'completed') {
-        // 只顯示已完成
-        todos = allTodos.filter((todo) => todo.isCompleted)
+        // 只顯示已完成，排除晚點再說
+        todos = allTodos.filter((todo) => todo.isCompleted && !todo.isLater)
       } else if (this.currentFilter === 'pending') {
-        // 只顯示未完成
-        todos = allTodos.filter((todo) => !todo.isCompleted)
+        // 只顯示未完成，排除晚點再說
+        todos = allTodos.filter((todo) => !todo.isCompleted && !todo.isLater)
+      } else if (this.currentFilter === 'later') {
+        // 只顯示晚點再說
+        todos = allTodos.filter((todo) => todo.isLater === true)
+      } else {
+        // 全部：顯示所有非晚點再說的項目
+        todos = allTodos.filter((todo) => !todo.isLater)
       }
       // 日期篩選（只顯示指定日期之後的待辦）
       if (this.dateFilter) {
@@ -273,11 +281,11 @@ export default {
       const sortedTodos = todos.sort((a, b) => b.id - a.id).sort((a, b) => new Date(b.date) - new Date(a.date))
       return sortedTodos
     },
-    // 篩選出未完成的待辦清單（僅顯示未完成）
+    // 篩選出未完成的待辦清單（僅顯示未完成，排除晚點再說）
     filteredPendingTodos () {
       return this.filteredTodos.filter((todo) => !todo.isCompleted)
     },
-    // 篩選出已完成的待辦清單（僅顯示已完成）
+    // 篩選出已完成的待辦清單（僅顯示已完成，排除晚點再說）
     filteredCompletedTodos () {
       return this.filteredTodos.filter((todo) => todo.isCompleted)
     },
@@ -336,6 +344,11 @@ export default {
 
       // 轉為陣列並排序
       return Array.from(tagSet).sort()
+    },
+    // 計算總計（排除晚點再說的項目）
+    totalTodosExcludingLater () {
+      // 當前的 filteredTodos 已經排除了晚點再說的項目
+      return this.filteredTodos.length
     }
   },
   methods: {
@@ -406,7 +419,8 @@ export default {
         ...todo,
         id: undefined,
         date: today,
-        isCompleted: false
+        // 如果是晚點再說的項目，保留 isCompleted 狀態；否則強制設為 false
+        isCompleted: todo.isLater ? todo.isCompleted : false
       }
       if (confirm('確定要複製這個待辦事項嗎？')) {
         this.addTodo(copiedTodo)
@@ -492,19 +506,23 @@ export default {
           todo.date,
           todo.name,
           todo.content || '',
-          todo.timeNeeded || '',
+          todo.time || '',
           todo.location || '',
           todo.remarks || '',
           todo.tag || '',
-          todo.isCompleted ? '已完成' : '未完成'
+          todo.isCompleted ? '已完成' : '未完成',
+          todo.isLater ? '晚點再說' : '列入排程'
         ])
 
         // 建立工作簿
         const wb = XLSX.utils.book_new()
-        const ws = XLSX.utils.aoa_to_sheet([['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '標籤', '狀態'], ...excelData])
+        const ws = XLSX.utils.aoa_to_sheet([
+          ['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '標籤', '狀態', '處理時機'],
+          ...excelData
+        ])
 
         // 設定欄寬
-        const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10]
+        const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10, 12]
         ws['!cols'] = colWidths.map((width) => ({ width }))
 
         // 新增工作表到工作簿
@@ -546,16 +564,21 @@ export default {
               const statusText = row[8] || ''
               const isCompleted = statusText === '已完成'
 
+              // 檢查處理時機欄位
+              const timingText = row[9] || ''
+              const isLater = timingText === '晚點再說'
+
               return {
                 id: Date.now() + (jsonData.length - 1 - index), // 生成唯一 ID
                 date: row[1] || this.getTaipeiDateString(),
                 name: row[2] || '',
                 content: row[3] || null,
-                timeNeeded: row[4] || null,
+                time: row[4] || null,
                 location: row[5] || null,
                 remarks: row[6] || null,
                 tag: row[7] || null,
-                isCompleted: isCompleted
+                isCompleted: isCompleted,
+                isLater: isLater
               }
             })
 
@@ -896,6 +919,7 @@ export default {
   color: #333;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .filter-btn.active {
@@ -1224,112 +1248,21 @@ export default {
   }
 
   .filter-tabs {
-    margin-right: 0;
-    min-width: 0;
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+    margin: 0;
+  }
+
+  .filter-btn:last-child {
+    margin-left: auto;
   }
 
   .tag-filter {
-    margin-left: 0;
-    min-width: 0;
     width: 100%;
     justify-content: center;
-  }
-
-  .filter-btn {
-    padding: 8px 16px;
-    font-size: 0.9rem;
-  }
-
-  .tag-select-container {
-    width: 100%;
-  }
-
-  .tag-select {
-    min-width: 100%;
-    font-size: 0.9rem;
-    padding: 8px 12px;
-    width: 100%;
-  }
-
-  .tag-select-hint {
-    font-size: 0.6rem;
-    text-align: right;
-  }
-
-  .date-filter {
-    padding: 15px;
-  }
-
-  .date-filter:not(.has-date) {
-    padding: 12px 15px;
-  }
-
-  .date-filter-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .date-filter:not(.has-date) .date-filter-content {
-    gap: 0;
-  }
-
-  .date-input-group {
-    width: 100%;
-  }
-
-  .date-input {
-    flex: 1;
-    font-size: 0.9rem;
-    padding: 8px 12px;
-  }
-
-  .date-label {
-    font-size: 0.9rem;
-  }
-
-  .todo-item {
-    padding: 15px;
-  }
-
-  .todo-header-row {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .todo-title {
-    flex: 1;
-    justify-content: flex-start;
-    gap: 8px;
-  }
-
-  .todo-actions {
-    flex-shrink: 0;
-  }
-
-  .todo-details {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .detail-item {
-    font-size: 0.85rem;
-  }
-
-  .todo-remarks {
-    font-size: 0.85rem;
-    padding: 8px;
-  }
-
-  .empty-state {
-    padding: 40px 15px;
-  }
-
-  .empty-icon {
-    font-size: 3rem;
+    order: 2;
+    margin-right: 0;
+    min-width: 0;
   }
 }
 
@@ -1518,8 +1451,11 @@ export default {
 
 .todo-title h3 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #333;
+  font-weight: 600;
+  line-height: 1.4;
+  flex: 1;
 }
 
 .todo-item.completed .todo-title h3 {
@@ -1805,6 +1741,7 @@ export default {
   .filter-btn {
     padding: 8px 16px;
     font-size: 0.9rem;
+    white-space: nowrap;
   }
 
   .tag-select-container {
