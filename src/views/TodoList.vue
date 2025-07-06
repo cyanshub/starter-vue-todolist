@@ -54,7 +54,7 @@
     </div>
 
     <!-- 日期篩選器 -->
-    <div class="date-filter">
+    <div class="date-filter" :class="{ 'has-date': dateFilter }">
       <div class="date-filter-content">
         <label @click="showDatePicker = true" class="date-label clickable">
           <v-icon name="calendar-alt" scale="1" />
@@ -936,6 +936,11 @@ export default {
   margin-bottom: 30px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(135, 206, 235, 0.2);
+  transition: all 0.3s ease;
+}
+
+.date-filter:not(.has-date) {
+  padding: 15px 20px;
 }
 
 .date-filter-content {
@@ -1257,10 +1262,18 @@ export default {
     padding: 15px;
   }
 
+  .date-filter:not(.has-date) {
+    padding: 12px 15px;
+  }
+
   .date-filter-content {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+  }
+
+  .date-filter:not(.has-date) .date-filter-content {
+    gap: 0;
   }
 
   .date-input-group {
@@ -1814,10 +1827,18 @@ export default {
     padding: 15px;
   }
 
+  .date-filter:not(.has-date) {
+    padding: 12px 15px;
+  }
+
   .date-filter-content {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+  }
+
+  .date-filter:not(.has-date) .date-filter-content {
+    gap: 0;
   }
 
   .date-input-group {
