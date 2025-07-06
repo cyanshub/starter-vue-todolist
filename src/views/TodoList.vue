@@ -301,15 +301,18 @@ export default {
         const date = new Date(startDate)
         date.setDate(startDate.getDate() + i)
 
+        // 使用本地日期格式，避免時區問題
+        const localDateString = this.formatDateToLocalString(date)
+
         // 判斷是否為本月、是否選取、是否為今日
         const isOtherMonth = date.getMonth() !== month
-        const isSelected = this.dateFilter && date.toISOString().split('T')[0] === this.dateFilter
+        const isSelected = this.dateFilter && localDateString === this.dateFilter
         const isToday = date.toDateString() === today.toDateString()
 
         days.push({
           key: date.toISOString(),
           day: date.getDate(),
-          date: date.toISOString().split('T')[0],
+          date: localDateString,
           otherMonth: isOtherMonth,
           selected: isSelected,
           today: isToday
@@ -465,6 +468,14 @@ export default {
       // 轉換為 UTC+8
       const taipeiTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
       return taipeiTime.toISOString().split('T')[0]
+    },
+
+    // 格式化日期為本地字串 (YYYY-MM-DD)，避免時區問題
+    formatDateToLocalString (date) {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
     },
 
     // 匯出 Excel
