@@ -491,6 +491,32 @@ export default {
 .radio-input {
   margin-right: 8px;
   cursor: pointer;
+  accent-color: #87ceeb;
+  /* 確保選中狀態時圓圈中間是白色 */
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ccc;
+  border-radius: 50%;
+  background: white;
+  position: relative;
+}
+
+.radio-input:checked {
+  border-color: #87ceeb;
+  background: white;
+}
+
+.radio-input:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #87ceeb;
 }
 
 .radio-text {
