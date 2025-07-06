@@ -25,7 +25,7 @@ const loadTodosFromStorage = () => {
       } else {
         return {
           todos: todosDummy,
-          nextId: 994
+          nextId: 1001
         }
       }
     }
@@ -36,7 +36,7 @@ const loadTodosFromStorage = () => {
   // 如果 localStorage 沒有資料或讀取失敗，返回 dummy data
   return {
     todos: todosDummy,
-    nextId: 994
+    nextId: 1001
   }
 }
 

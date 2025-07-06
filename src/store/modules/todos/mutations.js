@@ -5,7 +5,7 @@ import { todosDummy } from './dummy.js' // Dummy data 用於重置
 const saveToLocalStorage = (todos, nextId) => {
   try {
     // 過濾掉範例資料（ID 為 991, 992, 993 的資料）
-    const userTodos = todos.filter(todo => ![991, 992, 993].includes(todo.id))
+    const userTodos = todos.filter(todo => ![991, 992, 993, 994].includes(todo.id))
 
     localStorage.setItem('vue-todo-todos', JSON.stringify(userTodos))
     localStorage.setItem('vue-todo-nextId', nextId.toString())
@@ -68,7 +68,7 @@ export default {
   CLEAR_ALL_DATA (state) {
     // 重置為 dummy data
     state.todos = [...todosDummy]
-    state.nextId = 994
+    state.nextId = 1001
     // 清除 localStorage
     // 不保存範例資料
     localStorage.removeItem('vue-todo-todos')
