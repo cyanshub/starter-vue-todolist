@@ -47,10 +47,12 @@
       </div>
 
       <div class="filter-tabs">
-        <button @click="currentFilter = 'all'" :class="{ active: currentFilter === 'all' }" class="filter-btn">全部</button>
-        <button @click="currentFilter = 'pending'" :class="{ active: currentFilter === 'pending' }" class="filter-btn">待完成</button>
-        <button @click="currentFilter = 'completed'" :class="{ active: currentFilter === 'completed' }" class="filter-btn">已完成</button>
-        <button @click="currentFilter = 'later'" :class="{ active: currentFilter === 'later' }" class="filter-btn">晚點再說</button>
+        <button @click="handleFilterChange('all')" :class="{ active: currentFilter === 'all' }" class="filter-btn">全部</button>
+        <button @click="handleFilterChange('pending')" :class="{ active: currentFilter === 'pending' }" class="filter-btn">待完成</button>
+        <button @click="handleFilterChange('completed')" :class="{ active: currentFilter === 'completed' }" class="filter-btn">
+          已完成
+        </button>
+        <button @click="handleFilterChange('later')" :class="{ active: currentFilter === 'later' }" class="filter-btn">晚點再說</button>
       </div>
     </div>
 
@@ -784,6 +786,20 @@ export default {
     // 關閉日期選擇器
     closeDatePicker () {
       this.showDatePicker = false
+    },
+
+    // 處理狀態篩選變更
+    handleFilterChange (newFilter) {
+      this.currentFilter = newFilter
+
+      // 檢查當前選中的標籤是否在新的狀態下仍然可用
+      this.$nextTick(() => {
+        if (this.selectedTag && !this.availableTags.includes(this.selectedTag)) {
+          // 如果選中的標籤在新的狀態下不存在，自動切換為所有標籤
+          this.selectedTag = ''
+          localStorage.removeItem('todoSelectedTag')
+        }
+      })
     },
 
     // 處理標籤篩選變更
