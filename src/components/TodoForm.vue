@@ -74,8 +74,22 @@
               <span v-for="tag in limitedTags" :key="tag" @click="addTagToInput(tag)" class="filtered-tag" :title="`點擊加入 ${tag}`">
                 {{ tag }}
               </span>
-              <span v-if="remainingTagsCount > 0" class="more-tags-indicator" :title="`還有 ${remainingTagsCount} 個標籤`">
+              <span
+                v-if="!showAllTags && remainingTagsCount > 0"
+                class="more-tags-indicator"
+                :title="`還有 ${remainingTagsCount} 個標籤`"
+                @click="showAllTags = true"
+                style="cursor: pointer"
+              >
                 +{{ remainingTagsCount }}
+              </span>
+              <span
+                v-if="showAllTags && filteredTags.length > 12"
+                class="collapse-tags-indicator"
+                @click="showAllTags = false"
+                style="cursor: pointer; color: #87ceeb; margin-left: 8px; font-size: 0.9em"
+              >
+                收合
               </span>
             </div>
           </div>
@@ -106,7 +120,7 @@ export default {
       default: () => []
     }
   },
-  data () {
+  data() {
     return {
       form: {
         name: '',
@@ -117,23 +131,27 @@ export default {
         remarks: '',
         tag: '',
         isLater: false
-      }
+      },
+      showAllTags: false
     }
   },
   computed: {
-    isEditing () {
+    isEditing() {
       return !!this.todo
     },
-    limitedTags () {
+    limitedTags() {
+      if (this.showAllTags) {
+        return this.filteredTags || []
+      }
       return this.filteredTags ? this.filteredTags.slice(0, 12) : []
     },
-    remainingTagsCount () {
+    remainingTagsCount() {
       return this.filteredTags ? Math.max(0, this.filteredTags.length - 12) : 0
     }
   },
   watch: {
     todo: {
-      handler (newTodo) {
+      handler(newTodo) {
         if (newTodo) {
           this.form = { ...newTodo }
         } else {
@@ -145,14 +163,14 @@ export default {
   },
   methods: {
     // 獲取台北時間的日期格式 (YYYY-MM-DD)
-    getTaipeiDateString () {
+    getTaipeiDateString() {
       const now = new Date()
       // 台北時區是 UTC+8
       const taipeiTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
       return taipeiTime.toISOString().split('T')[0]
     },
 
-    resetForm () {
+    resetForm() {
       this.form = {
         name: '',
         content: '',
@@ -165,7 +183,7 @@ export default {
       }
     },
 
-    handleSubmit () {
+    handleSubmit() {
       const todoData = {
         name: (this.form.name || '').trim(),
         content: (this.form.content || '').trim() || null,
@@ -184,28 +202,27 @@ export default {
       this.$emit('save', todoData)
     },
 
-    closeModal (event) {
+    closeModal(event) {
       if (event.target.classList.contains('modal-overlay')) {
         this.$emit('close')
       }
     },
 
-    addTagToInput (tag) {
-      // 如果輸入框是空的，直接設置標籤
-      if (!this.form.tag || this.form.tag.trim() === '') {
-        this.form.tag = tag
+    addTagToInput(tag) {
+      const tags = (this.form.tag || '').split(' ').filter((t) => t.trim() !== '')
+      const idx = tags.indexOf(tag)
+      if (idx !== -1) {
+        // 已存在，移除
+        tags.splice(idx, 1)
       } else {
-        // 如果已有標籤，檢查是否已經存在
-        const existingTags = this.form.tag.split(' ').filter((t) => t.trim() !== '')
-        if (!existingTags.includes(tag)) {
-          // 如果標籤不存在，則添加到末尾
-          this.form.tag = this.form.tag.trim() + ' ' + tag
-        }
+        // 不存在，加上
+        tags.push(tag)
       }
+      this.form.tag = tags.join(' ')
     }
   },
 
-  mounted () {
+  mounted() {
     if (!this.todo) {
       this.resetForm()
     }
@@ -522,5 +539,24 @@ export default {
 .radio-text {
   font-size: 14px;
   color: #333;
+}
+
+/* 新增收合按鈕樣式 */
+.collapse-tags-indicator {
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(135, 206, 235, 0.08);
+  color: #87ceeb;
+  font-weight: 500;
+  border: 1px solid rgba(135, 206, 235, 0.15);
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background 0.2s;
+}
+.collapse-tags-indicator:hover {
+  background: rgba(135, 206, 235, 0.18);
+}
+.more-tags-indicator {
+  cursor: pointer;
 }
 </style>
