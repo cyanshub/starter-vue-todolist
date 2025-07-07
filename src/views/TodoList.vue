@@ -39,10 +39,15 @@
     <div class="filter-section">
       <div class="tag-filter">
         <div class="tag-select-container">
-          <select v-model="selectedTag" @change="handleTagFilterChange" class="tag-select">
-            <option value="">所有標籤</option>
-            <option v-for="tag in availableTags" :key="tag" :value="tag">{{ truncateTag(tag) }}</option>
-          </select>
+          <button @click="openTagDialog" class="tag-select-btn">
+            <v-icon name="tags" scale="1" />
+            <span class="tag-select-label">
+              <span v-if="selectedTags.length === 0">所有標籤</span>
+              <span v-else-if="selectedTags.length === 1">{{ truncateTag(selectedTags[0]) }}</span>
+              <span v-else>{{ selectedTags.length }} 個標籤</span>
+            </span>
+            <v-icon name="chevron-down" scale="0.8" />
+          </button>
         </div>
       </div>
 
@@ -256,6 +261,38 @@
         </div>
       </div>
     </div>
+
+    <!-- 標籤選擇對話視窗 -->
+    <div v-if="showTagDialog" class="tag-dialog-overlay" @click="closeTagDialog">
+      <div class="tag-dialog-modal" @click.stop>
+        <div class="tag-dialog-header">
+          <h3>選擇標籤</h3>
+          <button @click="closeTagDialog" class="close-btn">
+            <v-icon name="times" scale="1.2" />
+          </button>
+        </div>
+
+        <div class="tag-dialog-content">
+          <div class="tag-list">
+            <label v-for="tag in dialogAvailableTags" :key="tag" class="tag-checkbox-label">
+              <input type="checkbox" :value="tag" v-model="tempSelectedTags" class="tag-checkbox" />
+              <span class="tag-checkbox-custom"></span>
+              <span class="tag-checkbox-text">{{ tag }}</span>
+            </label>
+          </div>
+
+          <div v-if="dialogAvailableTags.length === 0" class="no-tags-message">
+            <v-icon name="tags" scale="2" />
+            <p>目前沒有可用的標籤</p>
+          </div>
+        </div>
+
+        <div class="tag-dialog-footer">
+          <button @click="clearAllTags" class="clear-btn">清除選取</button>
+          <button @click="confirmTagSelection" class="confirm-btn confirm-right">確定</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -273,7 +310,7 @@ export default {
       editingTodo: null,
       currentFilter: 'all',
       dateFilter: localStorage.getItem('todoDateFilter') || '',
-      selectedTag: localStorage.getItem('todoSelectedTag') || '',
+      selectedTags: JSON.parse(localStorage.getItem('todoSelectedTags') || '[]'),
       showDatePicker: false,
       currentDate: new Date(),
       weekdays: ['日', '一', '二', '三', '四', '五', '六'],
@@ -282,7 +319,11 @@ export default {
       // 匯出對話視窗狀態
       showExportDialog: false,
       exportType: 'all', // 'all' 或 'tags'
-      exportTags: ''
+      exportTags: '',
+      // 標籤選擇對話視窗狀態
+      showTagDialog: false,
+      // 臨時標籤選擇（用於對話視窗內，不影響實際篩選）
+      tempSelectedTags: []
     }
   },
   computed: {
@@ -322,12 +363,13 @@ export default {
         })
       }
       // 標籤篩選（只顯示包含指定標籤的待辦）
-      if (this.selectedTag) {
+      if (this.selectedTags && this.selectedTags.length > 0) {
         todos = todos.filter((todo) => {
           if (!todo.tag) return false
           // 支援多標籤分割
           const tags = todo.tag.split(' ').map((tag) => tag.trim())
-          return tags.includes(this.selectedTag)
+          // 只要包含任一選中的標籤就顯示
+          return this.selectedTags.some((selectedTag) => tags.includes(selectedTag))
         })
       }
       // 先依 id 再依日期排序（新到舊，日期新者優先）
@@ -396,6 +438,42 @@ export default {
       })
 
       // 轉為陣列並排序
+      return Array.from(tagSet).sort()
+    },
+    // 對話視窗中顯示的所有標籤（基於當前狀態篩選，但不考慮標籤篩選）
+    dialogAvailableTags () {
+      // 直接從 Vuex state 讀取原始資料
+      const allTodos = this.$store.state.todos.todos
+      let todos = allTodos
+
+      // 根據當前篩選條件篩選（但不考慮標籤篩選）
+      if (this.currentFilter === 'completed') {
+        todos = allTodos.filter((todo) => todo.isCompleted && !todo.isLater)
+      } else if (this.currentFilter === 'pending') {
+        todos = allTodos.filter((todo) => !todo.isCompleted && !todo.isLater)
+      } else if (this.currentFilter === 'later') {
+        todos = allTodos.filter((todo) => todo.isLater === true)
+      } else {
+        todos = allTodos.filter((todo) => !todo.isLater)
+      }
+
+      // 日期篩選（只顯示指定日期之後的待辦）
+      if (this.dateFilter) {
+        todos = todos.filter((todo) => {
+          const todoDate = new Date(todo.date)
+          const filterDate = new Date(this.dateFilter)
+          return todoDate >= filterDate
+        })
+      }
+
+      const tagSet = new Set()
+      todos.forEach((todo) => {
+        if (todo.tag) {
+          const tags = todo.tag.split(' ').filter((tag) => tag.trim() !== '')
+          tags.forEach((tag) => tagSet.add(tag.trim()))
+        }
+      })
+
       return Array.from(tagSet).sort()
     },
     // 計算總計（排除晚點再說的項目）
@@ -521,7 +599,7 @@ export default {
         this.clearAllData()
         // 重置日期篩選
         this.dateFilter = ''
-        this.selectedTag = ''
+        this.selectedTags = []
         // 強制更新 Vue 的 UI 顯示
         this.$nextTick(() => {
           this.$forceUpdate()
@@ -794,28 +872,49 @@ export default {
 
       // 檢查當前選中的標籤是否在新的狀態下仍然可用
       this.$nextTick(() => {
-        if (this.selectedTag && !this.availableTags.includes(this.selectedTag)) {
-          // 如果選中的標籤在新的狀態下不存在，自動切換為所有標籤
-          this.selectedTag = ''
-          localStorage.removeItem('todoSelectedTag')
+        if (this.selectedTags && this.selectedTags.length > 0) {
+          // 過濾掉在新狀態下不存在的標籤
+          const validTags = this.selectedTags.filter((tag) => this.availableTags.includes(tag))
+          if (validTags.length !== this.selectedTags.length) {
+            this.selectedTags = validTags
+            this.saveSelectedTags()
+          }
         }
       })
     },
 
-    // 處理標籤篩選變更
-    handleTagFilterChange () {
-      // 儲存到 localStorage
-      if (this.selectedTag) {
-        localStorage.setItem('todoSelectedTag', this.selectedTag)
+    // 儲存選中的標籤到 localStorage
+    saveSelectedTags () {
+      if (this.selectedTags && this.selectedTags.length > 0) {
+        localStorage.setItem('todoSelectedTags', JSON.stringify(this.selectedTags))
       } else {
-        localStorage.removeItem('todoSelectedTag')
+        localStorage.removeItem('todoSelectedTags')
       }
     },
 
-    // 清除標籤篩選
-    clearTagFilter () {
-      this.selectedTag = ''
-      localStorage.removeItem('todoSelectedTag')
+    // 開啟標籤對話視窗
+    openTagDialog () {
+      this.tempSelectedTags = [...this.selectedTags]
+      this.showTagDialog = true
+    },
+
+    // 清除所有標籤篩選
+    clearAllTags () {
+      this.selectedTags = []
+      this.tempSelectedTags = []
+      this.saveSelectedTags()
+    },
+
+    // 關閉標籤對話視窗
+    closeTagDialog () {
+      this.showTagDialog = false
+    },
+
+    // 確認標籤選擇
+    confirmTagSelection () {
+      this.selectedTags = [...this.tempSelectedTags]
+      this.saveSelectedTags()
+      this.closeTagDialog()
     },
 
     checkAllTodoHeights () {
@@ -2270,5 +2369,281 @@ export default {
     padding: 14px 20px;
     font-size: 0.95rem;
   }
+}
+
+/* 標籤選擇按鈕樣式 */
+.tag-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(135, 206, 235, 0.3);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  min-width: 200px;
+  width: 100%;
+  justify-content: space-between;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.tag-select-btn:hover {
+  border-color: #87ceeb;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.tag-select-btn:focus {
+  outline: none;
+  border-color: #87ceeb;
+  box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.1);
+}
+
+/* 標籤對話視窗樣式 */
+.tag-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.tag-dialog-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.tag-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.tag-dialog-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tag-dialog-header .close-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.tag-dialog-header .close-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.tag-dialog-content {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tag-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.tag-checkbox-label:hover {
+  background: #f3f4f6;
+}
+
+.tag-checkbox {
+  display: none;
+}
+
+.tag-checkbox-custom {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  margin-right: 12px;
+  position: relative;
+  transition: all 0.2s;
+  background: white;
+}
+
+.tag-checkbox:checked + .tag-checkbox-custom {
+  border-color: #87ceeb;
+  background: #87ceeb;
+}
+
+.tag-checkbox:checked + .tag-checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.tag-checkbox-text {
+  font-size: 1rem;
+  color: #374151;
+  font-weight: 500;
+  flex: 1;
+}
+
+.no-tags-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.no-tags-message svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-tags-message p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tag-dialog-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  flex-direction: row;
+}
+
+.tag-dialog-footer .clear-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 2px solid #d1d5db;
+  background: white;
+  color: #374151;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-dialog-footer .clear-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.tag-dialog-footer .confirm-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: #87ceeb;
+  color: white;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.tag-dialog-footer .confirm-btn:hover {
+  background: #5fb4d3;
+  box-shadow: 0 4px 12px rgba(135, 206, 235, 0.3);
+}
+
+@media (max-width: 768px) {
+  .tag-dialog-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .tag-dialog-header {
+    padding: 16px 20px;
+  }
+
+  .tag-dialog-content {
+    padding: 20px;
+    max-height: 300px;
+  }
+
+  .tag-dialog-footer {
+    padding: 16px 20px;
+    flex-direction: column;
+  }
+
+  .tag-checkbox-label {
+    padding: 10px;
+  }
+
+  .tag-checkbox-text {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .tag-dialog-footer {
+    padding: 16px 20px;
+    flex-direction: column-reverse;
+  }
+  .tag-dialog-footer .confirm-right {
+    margin-left: 0;
+    margin-bottom: 10px;
+  }
+  .tag-dialog-footer .clear-btn,
+  .tag-dialog-footer .confirm-btn {
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
+}
+
+/* 讓標籤選擇按鈕內的文字靠左 */
+.tag-select-label {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 </style>
