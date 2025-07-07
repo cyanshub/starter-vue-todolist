@@ -464,15 +464,15 @@ export default {
       return tag.length > 13 ? tag.substring(0, 13) + '...' : tag
     },
 
-    // 複製一筆待辦事項，日期設為今天、id 重新產生
+    // 複製一筆待辦事項，id 重新產生
     copyTodo (todo) {
       const today = this.getTaipeiDateString()
       // 產生新物件，id undefined 讓 store 自動分配
       const copiedTodo = {
         ...todo,
         id: undefined,
-        date: today,
-        // 如果是晚點再說的項目，保留 isCompleted 狀態；否則強制設為 false
+        // 如果是晚點再說的項目，保留原日期和 isCompleted 狀態；否則設為今天且強制設為 false
+        date: todo.isLater ? todo.date : today,
         isCompleted: todo.isLater ? todo.isCompleted : false
       }
       if (confirm('確定要複製這個待辦事項嗎？')) {
