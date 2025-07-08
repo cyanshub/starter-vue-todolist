@@ -120,7 +120,7 @@ export default {
       default: () => []
     }
   },
-  data() {
+  data () {
     return {
       form: {
         name: '',
@@ -136,22 +136,22 @@ export default {
     }
   },
   computed: {
-    isEditing() {
+    isEditing () {
       return !!this.todo
     },
-    limitedTags() {
+    limitedTags () {
       if (this.showAllTags) {
         return this.filteredTags || []
       }
       return this.filteredTags ? this.filteredTags.slice(0, 12) : []
     },
-    remainingTagsCount() {
+    remainingTagsCount () {
       return this.filteredTags ? Math.max(0, this.filteredTags.length - 12) : 0
     }
   },
   watch: {
     todo: {
-      handler(newTodo) {
+      handler (newTodo) {
         if (newTodo) {
           this.form = { ...newTodo }
         } else {
@@ -163,14 +163,14 @@ export default {
   },
   methods: {
     // 獲取台北時間的日期格式 (YYYY-MM-DD)
-    getTaipeiDateString() {
+    getTaipeiDateString () {
       const now = new Date()
       // 台北時區是 UTC+8
       const taipeiTime = new Date(now.getTime() + 8 * 60 * 60 * 1000)
       return taipeiTime.toISOString().split('T')[0]
     },
 
-    resetForm() {
+    resetForm () {
       this.form = {
         name: '',
         content: '',
@@ -183,7 +183,7 @@ export default {
       }
     },
 
-    handleSubmit() {
+    handleSubmit () {
       const todoData = {
         name: (this.form.name || '').trim(),
         content: (this.form.content || '').trim() || null,
@@ -202,13 +202,13 @@ export default {
       this.$emit('save', todoData)
     },
 
-    closeModal(event) {
+    closeModal (event) {
       if (event.target.classList.contains('modal-overlay')) {
         this.$emit('close')
       }
     },
 
-    addTagToInput(tag) {
+    addTagToInput (tag) {
       const tags = (this.form.tag || '').split(' ').filter((t) => t.trim() !== '')
       const idx = tags.indexOf(tag)
       if (idx !== -1) {
@@ -222,7 +222,7 @@ export default {
     }
   },
 
-  mounted() {
+  mounted () {
     if (!this.todo) {
       this.resetForm()
     }

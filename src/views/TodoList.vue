@@ -288,8 +288,14 @@
         </div>
 
         <div class="tag-dialog-footer">
-          <button @click="clearAllTags" class="clear-btn">清除選取</button>
-          <button @click="confirmTagSelection" class="confirm-btn confirm-right">確定</button>
+          <div class="tag-dialog-actions">
+            <button @click="selectAllTags" class="action-link">選取全部</button>
+            <button @click="clearAllTags" class="action-link">清除選取</button>
+          </div>
+          <div class="tag-dialog-buttons">
+            <button @click="closeTagDialog" class="cancel-btn">取消</button>
+            <button @click="confirmTagSelection" class="confirm-btn">確定</button>
+          </div>
         </div>
       </div>
     </div>
@@ -466,14 +472,17 @@ export default {
         })
       }
 
+      // 收集所有標籤
       const tagSet = new Set()
       todos.forEach((todo) => {
         if (todo.tag) {
+          // 支援多標籤分割與去除空白
           const tags = todo.tag.split(' ').filter((tag) => tag.trim() !== '')
           tags.forEach((tag) => tagSet.add(tag.trim()))
         }
       })
 
+      // 轉為陣列並排序
       return Array.from(tagSet).sort()
     },
     // 計算總計（排除晚點再說的項目）
@@ -896,6 +905,11 @@ export default {
     openTagDialog () {
       this.tempSelectedTags = [...this.selectedTags]
       this.showTagDialog = true
+    },
+
+    // 選取所有標籤
+    selectAllTags () {
+      this.tempSelectedTags = [...this.dialogAvailableTags]
     },
 
     // 清除所有標籤篩選
@@ -2545,14 +2559,41 @@ export default {
 
 .tag-dialog-footer {
   display: flex;
-  gap: 12px;
-  padding: 20px 24px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 16px;
   border-top: 1px solid #e5e7eb;
   background: #f8fafc;
-  flex-direction: row;
 }
 
-.tag-dialog-footer .clear-btn {
+.tag-dialog-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.tag-dialog-actions .action-link {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 4px 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.tag-dialog-actions .action-link:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.tag-dialog-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.tag-dialog-buttons .cancel-btn {
   flex: 1;
   padding: 12px 20px;
   border: 2px solid #d1d5db;
@@ -2565,12 +2606,12 @@ export default {
   transition: all 0.2s;
 }
 
-.tag-dialog-footer .clear-btn:hover {
+.tag-dialog-buttons .cancel-btn:hover {
   background: #f3f4f6;
   border-color: #9ca3af;
 }
 
-.tag-dialog-footer .confirm-btn {
+.tag-dialog-buttons .confirm-btn {
   flex: 1;
   padding: 12px 20px;
   border: none;
@@ -2583,7 +2624,7 @@ export default {
   transition: background 0.2s, box-shadow 0.2s;
 }
 
-.tag-dialog-footer .confirm-btn:hover {
+.tag-dialog-buttons .confirm-btn:hover {
   background: #5fb4d3;
   box-shadow: 0 4px 12px rgba(135, 206, 235, 0.3);
 }
@@ -2604,8 +2645,25 @@ export default {
   }
 
   .tag-dialog-footer {
-    padding: 16px 20px;
-    flex-direction: column;
+    padding: 16px 12px;
+  }
+
+  .tag-dialog-actions {
+    gap: 3px;
+  }
+
+  .tag-dialog-actions .action-link {
+    padding: 4px 4px;
+  }
+
+  .tag-dialog-buttons {
+    flex-direction: column-reverse;
+  }
+
+  .tag-dialog-buttons .cancel-btn,
+  .tag-dialog-buttons .confirm-btn {
+    padding: 14px 20px;
+    font-size: 0.95rem;
   }
 
   .tag-checkbox-label {
@@ -2615,35 +2673,5 @@ export default {
   .tag-checkbox-text {
     font-size: 0.95rem;
   }
-}
-
-@media (max-width: 768px) {
-  .tag-dialog-footer {
-    padding: 16px 20px;
-    flex-direction: column-reverse;
-  }
-  .tag-dialog-footer .confirm-right {
-    margin-left: 0;
-    margin-bottom: 10px;
-  }
-  .tag-dialog-footer .clear-btn,
-  .tag-dialog-footer .confirm-btn {
-    padding: 14px 20px;
-    font-size: 0.95rem;
-  }
-}
-
-/* 讓標籤選擇按鈕內的文字靠左 */
-.tag-select-label {
-  flex: 1;
-  text-align: left;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 1rem;
-  font-family: inherit;
-  font-weight: 400;
-  letter-spacing: 0;
 }
 </style>
