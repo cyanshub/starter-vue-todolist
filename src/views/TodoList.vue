@@ -805,6 +805,14 @@ export default {
 
               // 強制更新 Vue 的 UI 顯示
               this.$forceUpdate()
+
+              // 匯入完成後立即檢查所有待辦事項的展開狀態
+              this.$nextTick(() => {
+                this.checkAllTodoHeights()
+                // 額外延遲檢查，確保圖片載入完成
+                setTimeout(() => this.checkAllTodoHeights(), 500)
+                setTimeout(() => this.checkAllTodoHeights(), 1000)
+              })
             }
           } catch (error) {
             console.error('匯入失敗：', error)
