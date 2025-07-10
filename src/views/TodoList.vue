@@ -1440,6 +1440,35 @@ export default {
   border-left: 3px solid #87ceeb;
   line-height: 1.6;
   color: #666;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.description-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: block;
+}
+
+.description-content img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.detail-info .detail-item a {
+  color: #5fb4d3;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  word-break: break-all;
+}
+
+.detail-info .detail-item a:hover {
+  color: #0f172a;
+  text-decoration: underline;
 }
 
 .detail-info {
