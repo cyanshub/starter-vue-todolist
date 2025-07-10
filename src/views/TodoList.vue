@@ -251,7 +251,7 @@
             <div class="list-item-cell title-cell">
               <div class="title-content">
                 <input type="checkbox" :checked="todo.isCompleted" @change="toggleTodo(todo.id)" class="todo-checkbox" />
-                <span class="todo-title-text">{{ todo.name }}</span>
+                <span class="todo-title-text clickable" @click="showTodoDetail(todo)">{{ todo.name }}</span>
               </div>
             </div>
             <div class="list-item-cell date-cell">
@@ -367,6 +367,64 @@
         </div>
       </div>
     </div>
+
+    <!-- 待辦事項詳情對話視窗 -->
+    <div v-if="showTodoDetailDialog" class="todo-detail-dialog-overlay" @click="closeTodoDetailDialog">
+      <div class="todo-detail-dialog-modal" @click.stop>
+        <div class="todo-detail-dialog-header">
+          <h3>待辦事項詳情</h3>
+          <button @click="closeTodoDetailDialog" class="close-btn">
+            <v-icon name="times" scale="1.2" />
+          </button>
+        </div>
+
+        <div class="todo-detail-dialog-content" v-if="selectedTodoForDetail">
+          <div class="detail-title">
+            <h4>{{ selectedTodoForDetail.name }}</h4>
+            <div class="detail-status">
+              <span v-if="selectedTodoForDetail.isCompleted" class="status-completed">已完成</span>
+              <span v-else class="status-pending">待完成</span>
+            </div>
+          </div>
+
+          <div class="detail-description" v-if="selectedTodoForDetail.content">
+            <h5>內容描述</h5>
+            <div class="description-content" v-html="formatContent(selectedTodoForDetail.content)"></div>
+          </div>
+
+          <div class="detail-info">
+            <div class="detail-item" v-if="selectedTodoForDetail.date">
+              <span class="detail-icon"><v-icon name="calendar-alt" scale="1" /></span>
+              <span>{{ formatDateWithWeekday(selectedTodoForDetail.date) }}</span>
+            </div>
+            <div class="detail-item" v-if="selectedTodoForDetail.time">
+              <span class="detail-icon"><v-icon name="clock" scale="1" /></span>
+              <span>{{ selectedTodoForDetail.time }} 小時</span>
+            </div>
+            <div class="detail-item" v-if="selectedTodoForDetail.location">
+              <span class="detail-icon"><v-icon name="map-marker-alt" scale="1" /></span>
+              <span v-html="formatContent(selectedTodoForDetail.location, false)"></span>
+            </div>
+            <div class="detail-item" v-if="selectedTodoForDetail.remarks">
+              <span class="detail-icon"><v-icon name="sticky-note" scale="1" /></span>
+              <span>{{ selectedTodoForDetail.remarks }}</span>
+            </div>
+            <div class="detail-item" v-if="selectedTodoForDetail.tag">
+              <span class="detail-icon"><v-icon name="tags" scale="1" /></span>
+              <div class="tags-container">
+                <span v-for="tag in selectedTodoForDetail.tag.split(' ').filter((t) => t.trim())" :key="tag" class="tag-item">{{
+                  tag
+                }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="todo-detail-dialog-footer">
+          <button @click="closeTodoDetailDialog" class="confirm-btn">關閉</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -398,7 +456,10 @@ export default {
       showTagDialog: false,
       // 臨時標籤選擇（用於對話視窗內，不影響實際篩選）
       tempSelectedTags: [],
-      viewMode: localStorage.getItem('todoViewMode') || 'card' // 'card' 或 'list'
+      viewMode: localStorage.getItem('todoViewMode') || 'card', // 'card' 或 'list'
+      // 待辦事項詳情對話視窗狀態
+      showTodoDetailDialog: false,
+      selectedTodoForDetail: null
     }
   },
   computed: {
@@ -1050,6 +1111,18 @@ export default {
     handleViewModeChange (mode) {
       this.viewMode = mode
       localStorage.setItem('todoViewMode', mode)
+    },
+
+    // 顯示待辦事項詳情對話視窗
+    showTodoDetail (todo) {
+      this.selectedTodoForDetail = todo
+      this.showTodoDetailDialog = true
+    },
+
+    // 關閉待辦事項詳情對話視窗
+    closeTodoDetailDialog () {
+      this.showTodoDetailDialog = false
+      this.selectedTodoForDetail = null
     }
   },
   mounted () {
@@ -1255,6 +1328,178 @@ export default {
   height: 1px;
   background: rgba(135, 206, 235, 0.2);
   margin: 5px 0;
+}
+
+/* 列表模式標題點擊樣式 */
+.todo-title-text.clickable {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.todo-title-text.clickable:hover {
+  color: #87ceeb;
+}
+
+/* 待辦事項詳情對話視窗樣式 */
+.todo-detail-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.todo-detail-dialog-modal {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.todo-detail-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.todo-detail-dialog-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.todo-detail-dialog-content {
+  padding: 20px;
+}
+
+.detail-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-title h4 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.detail-status {
+  display: flex;
+  gap: 10px;
+}
+
+.status-completed {
+  background: rgba(135, 206, 235, 0.1);
+  color: #87ceeb;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  background: rgba(135, 206, 235, 0.1);
+  color: #87ceeb;
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.detail-description {
+  margin-bottom: 20px;
+}
+
+.detail-description h5 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.description-content {
+  background: rgba(135, 206, 235, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 3px solid #87ceeb;
+  line-height: 1.6;
+  color: #666;
+}
+
+.detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-info .detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(135, 206, 235, 0.05);
+  border-radius: 8px;
+}
+
+.detail-info .detail-icon {
+  color: #87ceeb;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.detail-info .tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.detail-info .tag-item {
+  background: rgba(255, 193, 7, 0.2);
+  color: #b8860b;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.todo-detail-dialog-footer {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
+
+.todo-detail-dialog-footer .confirm-btn {
+  background: linear-gradient(45deg, #87ceeb, #b0e0e6);
+  border: none;
+  padding: 12px 30px;
+  border-radius: 25px;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.todo-detail-dialog-footer .confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(135, 206, 235, 0.3);
 }
 
 .filter-section {
