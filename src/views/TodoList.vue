@@ -21,17 +21,36 @@
 
     <!-- 統計資訊 -->
     <div class="stats">
-      <div class="stat-item">
+      <!-- 桌面版：分開顯示 -->
+      <div class="stat-item desktop-stat">
         <span class="stat-number">{{ totalTodosExcludingLater }}</span>
         <span class="stat-label">總計</span>
       </div>
-      <div class="stat-item">
+      <div class="stat-item desktop-stat">
         <span class="stat-number">{{ filteredPendingTodos.length }}</span>
         <span class="stat-label">待完成</span>
       </div>
-      <div class="stat-item">
+      <div class="stat-item desktop-stat">
         <span class="stat-number">{{ filteredCompletedTodos.length }}</span>
         <span class="stat-label">已完成</span>
+      </div>
+
+      <!-- 手機版：合併顯示 -->
+      <div class="mobile-stats-container">
+        <div class="mobile-stat-item">
+          <span class="mobile-stat-label">總計</span>
+          <span class="mobile-stat-number">{{ totalTodosExcludingLater }}</span>
+        </div>
+        <div class="mobile-stat-divider"></div>
+        <div class="mobile-stat-item">
+          <span class="mobile-stat-label">待完成</span>
+          <span class="mobile-stat-number">{{ filteredPendingTodos.length }}</span>
+        </div>
+        <div class="mobile-stat-divider"></div>
+        <div class="mobile-stat-item">
+          <span class="mobile-stat-label">已完成</span>
+          <span class="mobile-stat-number">{{ filteredCompletedTodos.length }}</span>
+        </div>
       </div>
     </div>
 
@@ -58,6 +77,16 @@
           已完成
         </button>
         <button @click="handleFilterChange('later')" :class="{ active: currentFilter === 'later' }" class="filter-btn">晚點再說</button>
+      </div>
+
+      <!-- 新增：視圖模式切換 -->
+      <div class="view-mode-toggle">
+        <button @click="handleViewModeChange('card')" :class="{ active: viewMode === 'card' }" class="view-btn" title="圖卡模式">
+          <v-icon name="th-large" scale="1" />
+        </button>
+        <button @click="handleViewModeChange('list')" :class="{ active: viewMode === 'list' }" class="view-btn" title="列表模式">
+          <v-icon name="list" scale="1" />
+        </button>
       </div>
     </div>
 
@@ -141,66 +170,105 @@
 
     <!-- Todo 列表 -->
     <div class="todos-container">
-      <div
-        v-for="todo in filteredTodos"
-        :key="todo.id"
-        class="todo-item"
-        :class="{ completed: todo.isCompleted, collapsed: isCollapsed(todo.id) }"
-        :data-todo-id="todo.id"
-      >
-        <div class="todo-content">
-          <div class="todo-header-row">
-            <div class="todo-title">
-              <input type="checkbox" :checked="todo.isCompleted" @change="toggleTodo(todo.id)" class="todo-checkbox" />
-              <h3>{{ todo.name }}</h3>
+      <!-- 圖卡模式 -->
+      <div v-if="viewMode === 'card'">
+        <div
+          v-for="todo in filteredTodos"
+          :key="todo.id"
+          class="todo-item"
+          :class="{ completed: todo.isCompleted, collapsed: isCollapsed(todo.id) }"
+          :data-todo-id="todo.id"
+        >
+          <div class="todo-content">
+            <div class="todo-header-row">
+              <div class="todo-title">
+                <input type="checkbox" :checked="todo.isCompleted" @change="toggleTodo(todo.id)" class="todo-checkbox" />
+                <h3>{{ todo.name }}</h3>
+              </div>
+              <div class="todo-actions">
+                <button @click="copyTodo(todo)" class="action-btn copy-btn" title="複製待辦事項">
+                  <v-icon name="copy" scale="1.2" />
+                </button>
+                <button @click="editTodo(todo)" class="action-btn edit-btn" title="編輯待辦事項">
+                  <v-icon name="edit" scale="1.2" />
+                </button>
+                <button @click="handleDeleteTodo(todo.id)" class="action-btn delete-btn" title="刪除待辦事項">
+                  <v-icon name="trash-alt" scale="1.2" />
+                </button>
+              </div>
             </div>
-            <div class="todo-actions">
-              <button @click="copyTodo(todo)" class="action-btn copy-btn" title="複製待辦事項">
-                <v-icon name="copy" scale="1.2" />
+            <div class="collapse-row" v-if="collapsedEligible[todo.id]">
+              <button class="collapse-button" @click="toggleCollapse(todo.id)">
+                <v-icon :name="isCollapsed(todo.id) ? 'plus-circle' : 'minus-circle'" scale="1" />
+                <span>{{ isCollapsed(todo.id) ? '查看更多' : '收合內容' }}</span>
               </button>
-              <button @click="editTodo(todo)" class="action-btn edit-btn" title="編輯待辦事項">
-                <v-icon name="edit" scale="1.2" />
-              </button>
-              <button @click="handleDeleteTodo(todo.id)" class="action-btn delete-btn" title="刪除待辦事項">
-                <v-icon name="trash-alt" scale="1.2" />
-              </button>
+            </div>
+            <div class="todo-body">
+              <!-- 只摺疊描述內容 -->
+              <div v-if="todo.content" class="todo-description-wrapper" :class="{ collapsed: isCollapsed(todo.id) }">
+                <p class="todo-description" v-html="formatContent(todo.content)"></p>
+              </div>
+            </div>
+            <!-- 以下資訊永遠顯示，移到 todo-body 外面 -->
+            <div class="todo-details">
+              <div class="detail-item" v-if="todo.date">
+                <span class="detail-icon"><v-icon name="calendar-alt" scale="1" /></span>
+                <span>{{ formatDateWithWeekday(todo.date) }}</span>
+              </div>
+              <div class="detail-item" v-if="todo.time">
+                <span class="detail-icon"><v-icon name="clock" scale="1" /></span>
+                <span>{{ todo.time }} 小時</span>
+              </div>
+              <div class="detail-item" v-if="todo.location">
+                <span class="detail-icon"><v-icon name="map-marker-alt" scale="1" /></span>
+                <span v-html="formatContent(todo.location, false)"></span>
+              </div>
+            </div>
+            <div class="todo-remarks" v-if="todo.remarks">
+              <span class="detail-icon"><v-icon name="sticky-note" scale="1" /></span>
+              <span>{{ todo.remarks }}</span>
+            </div>
+            <div class="todo-tags" v-if="todo.tag">
+              <span class="detail-icon"><v-icon name="tags" scale="1" /></span>
+              <div class="tags-container">
+                <span v-for="tag in todo.tag.split(' ').filter((t) => t.trim())" :key="tag" class="tag-item">{{ truncateTag(tag) }}</span>
+              </div>
             </div>
           </div>
-          <div class="collapse-row" v-if="collapsedEligible[todo.id]">
-            <button class="collapse-button" @click="toggleCollapse(todo.id)">
-              <v-icon :name="isCollapsed(todo.id) ? 'plus-circle' : 'minus-circle'" scale="1" />
-              <span>{{ isCollapsed(todo.id) ? '查看更多' : '收合內容' }}</span>
-            </button>
-          </div>
-          <div class="todo-body">
-            <!-- 只摺疊描述內容 -->
-            <div v-if="todo.content" class="todo-description-wrapper" :class="{ collapsed: isCollapsed(todo.id) }">
-              <p class="todo-description" v-html="formatContent(todo.content)"></p>
+        </div>
+      </div>
+
+      <!-- 列表模式 -->
+      <div v-if="viewMode === 'list'" class="todos-list-container">
+        <div class="list-header">
+          <div class="list-header-cell title-cell">標題</div>
+          <div class="list-header-cell date-cell">日期</div>
+          <div class="list-header-cell actions-cell">操作</div>
+        </div>
+
+        <div class="list-body">
+          <div v-for="todo in filteredTodos" :key="todo.id" class="list-item" :class="{ completed: todo.isCompleted }">
+            <div class="list-item-cell title-cell">
+              <div class="title-content">
+                <input type="checkbox" :checked="todo.isCompleted" @change="toggleTodo(todo.id)" class="todo-checkbox" />
+                <span class="todo-title-text">{{ todo.name }}</span>
+              </div>
             </div>
-          </div>
-          <!-- 以下資訊永遠顯示，移到 todo-body 外面 -->
-          <div class="todo-details">
-            <div class="detail-item" v-if="todo.date">
-              <span class="detail-icon"><v-icon name="calendar-alt" scale="1" /></span>
-              <span>{{ formatDateWithWeekday(todo.date) }}</span>
+            <div class="list-item-cell date-cell">
+              <span>{{ todo.date }}</span>
             </div>
-            <div class="detail-item" v-if="todo.time">
-              <span class="detail-icon"><v-icon name="clock" scale="1" /></span>
-              <span>{{ todo.time }} 小時</span>
-            </div>
-            <div class="detail-item" v-if="todo.location">
-              <span class="detail-icon"><v-icon name="map-marker-alt" scale="1" /></span>
-              <span v-html="formatContent(todo.location, false)"></span>
-            </div>
-          </div>
-          <div class="todo-remarks" v-if="todo.remarks">
-            <span class="detail-icon"><v-icon name="sticky-note" scale="1" /></span>
-            <span>{{ todo.remarks }}</span>
-          </div>
-          <div class="todo-tags" v-if="todo.tag">
-            <span class="detail-icon"><v-icon name="tags" scale="1" /></span>
-            <div class="tags-container">
-              <span v-for="tag in todo.tag.split(' ').filter((t) => t.trim())" :key="tag" class="tag-item">{{ truncateTag(tag) }}</span>
+            <div class="list-item-cell actions-cell">
+              <div class="list-actions">
+                <button @click="copyTodo(todo)" class="action-btn copy-btn" title="複製待辦事項">
+                  <v-icon name="copy" scale="1" />
+                </button>
+                <button @click="editTodo(todo)" class="action-btn edit-btn" title="編輯待辦事項">
+                  <v-icon name="edit" scale="1" />
+                </button>
+                <button @click="handleDeleteTodo(todo.id)" class="action-btn delete-btn" title="刪除待辦事項">
+                  <v-icon name="trash-alt" scale="1" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -329,7 +397,8 @@ export default {
       // 標籤選擇對話視窗狀態
       showTagDialog: false,
       // 臨時標籤選擇（用於對話視窗內，不影響實際篩選）
-      tempSelectedTags: []
+      tempSelectedTags: [],
+      viewMode: localStorage.getItem('todoViewMode') || 'card' // 'card' 或 'list'
     }
   },
   computed: {
@@ -609,6 +678,12 @@ export default {
         // 重置日期篩選
         this.dateFilter = ''
         this.selectedTags = []
+        // 重置視圖模式
+        this.viewMode = 'card'
+        // 清除 localStorage 中的相關設定
+        localStorage.removeItem('todoDateFilter')
+        localStorage.removeItem('todoSelectedTags')
+        localStorage.removeItem('todoViewMode')
         // 強制更新 Vue 的 UI 顯示
         this.$nextTick(() => {
           this.$forceUpdate()
@@ -970,6 +1045,11 @@ export default {
 
     shouldShowCollapseButton (todoId) {
       return this.isCollapsed(todoId) || this.collapsedTodos.has(todoId)
+    },
+
+    handleViewModeChange (mode) {
+      this.viewMode = mode
+      localStorage.setItem('todoViewMode', mode)
     }
   },
   mounted () {
@@ -1139,6 +1219,42 @@ export default {
 .stat-label {
   font-size: 0.9rem;
   opacity: 0.8;
+}
+
+/* 手機版統計資訊樣式 */
+.mobile-stats-container {
+  display: none;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 15px;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(136, 184, 136, 0.2);
+  width: 100%;
+}
+
+.mobile-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.mobile-stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.mobile-stat-number {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #87ceeb;
+}
+
+.mobile-stat-divider {
+  height: 1px;
+  background: rgba(135, 206, 235, 0.2);
+  margin: 5px 0;
 }
 
 .filter-section {
@@ -1657,6 +1773,7 @@ export default {
 
 .todo-item {
   background: rgba(255, 255, 255, 0.8);
+  margin-bottom: 15px;
   border-radius: 15px;
   padding: 20px;
   backdrop-filter: blur(10px);
@@ -1975,6 +2092,16 @@ export default {
   .stats {
     flex-direction: column;
     gap: 15px;
+  }
+
+  /* 隱藏桌面版統計項目 */
+  .desktop-stat {
+    display: none;
+  }
+
+  /* 顯示手機版統計容器 */
+  .mobile-stats-container {
+    display: block;
   }
 
   .stat-item {
@@ -2680,6 +2807,224 @@ export default {
 
   .tag-checkbox-text {
     font-size: 0.95rem;
+  }
+}
+
+/* 新增：視圖模式切換 */
+.view-mode-toggle {
+  display: flex;
+  gap: 10px;
+  margin-left: 20px;
+}
+
+.view-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  color: #666;
+}
+
+.view-btn.active {
+  background: linear-gradient(45deg, #87ceeb, #b0e0e6);
+  color: white;
+}
+
+/* 列表模式樣式 */
+.todos-list-container {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(135, 206, 235, 0.2);
+  overflow: hidden;
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 120px;
+  gap: 15px;
+  padding: 15px 20px;
+  background: rgba(135, 206, 235, 0.1);
+  border-bottom: 1px solid rgba(135, 206, 235, 0.2);
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.list-header-cell {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.list-header-cell.title-cell {
+  justify-content: flex-start;
+}
+
+.list-header-cell.date-cell {
+  justify-content: flex-start;
+}
+
+.list-header-cell.actions-cell {
+  justify-content: center;
+}
+
+.list-body {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.list-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 120px;
+  gap: 15px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(135, 206, 235, 0.1);
+  transition: all 0.3s ease;
+  align-items: center;
+}
+
+.list-item:hover {
+  background: rgba(135, 206, 235, 0.05);
+}
+
+.list-item.completed {
+  opacity: 0.7;
+  background: rgba(135, 206, 235, 0.05);
+}
+
+.list-item-cell {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.title-cell {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.title-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.todo-title-text {
+  font-weight: 500;
+  color: #333;
+  line-height: 1.3;
+}
+
+.list-item.completed .todo-title-text {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.date-cell {
+  color: #666;
+  text-align: left;
+}
+
+.actions-cell {
+  justify-content: center;
+}
+
+.list-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.list-actions .action-btn {
+  padding: 4px;
+  font-size: 1rem;
+}
+
+.list-item .todo-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #87ceeb;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .filter-section {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .view-mode-toggle {
+    order: 1;
+    justify-content: flex-start;
+    margin-left: 0;
+    margin-bottom: 10px;
+    align-self: flex-start;
+  }
+
+  .tag-filter {
+    order: 2;
+    align-self: flex-start;
+  }
+
+  .filter-tabs {
+    order: 3;
+    align-self: flex-start;
+  }
+
+  .list-header,
+  .list-item {
+    grid-template-columns: 1.5fr 80px 80px;
+    gap: 8px;
+    padding: 10px 15px;
+    font-size: 0.8rem;
+  }
+
+  .list-header-cell,
+  .list-item-cell {
+    font-size: 0.8rem;
+  }
+
+  .title-content {
+    gap: 8px;
+  }
+
+  .todo-title-text {
+    font-size: 0.85rem;
+  }
+
+  .list-actions {
+    gap: 4px;
+  }
+
+  .list-actions .action-btn {
+    padding: 3px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 極小螢幕的額外調整 */
+@media (max-width: 480px) {
+  .list-header,
+  .list-item {
+    grid-template-columns: 1.2fr 70px 70px;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+
+  .list-header-cell,
+  .list-item-cell {
+    font-size: 0.75rem;
+  }
+
+  .todo-title-text {
+    font-size: 0.8rem;
   }
 }
 </style>
