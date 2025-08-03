@@ -6,6 +6,7 @@
         <div class="header-buttons">
           <button @click="handleImportExcel" class="import-btn"><v-icon name="download" scale="1" /> 匯入 Excel</button>
           <button @click="handleExportExcel" class="export-btn"><v-icon name="upload" scale="1" /> 匯出 Excel</button>
+          <button @click="handleEncryptedTransfer" class="encrypted-transfer-btn"><v-icon name="lock" scale="1" /> 加密傳輸</button>
           <button @click="handleResetData" class="reset-btn"><v-icon name="sync" scale="1" /> 重置資料</button>
         </div>
         <div class="tips">
@@ -425,6 +426,73 @@
         </div>
       </div>
     </div>
+
+    <!-- 加密傳輸對話視窗 -->
+    <div v-if="showEncryptedTransferDialog" class="encrypted-transfer-dialog-overlay" @click="closeEncryptedTransferDialog">
+      <div class="encrypted-transfer-dialog-modal" @click.stop>
+        <div class="encrypted-transfer-dialog-header">
+          <h3>加密傳輸</h3>
+          <button @click="closeEncryptedTransferDialog" class="close-btn">
+            <v-icon name="times" scale="1.2" />
+          </button>
+        </div>
+        <div class="encrypted-transfer-dialog-content">
+          <button class="encrypted-btn" @click="handleEncryptedExport"><v-icon name="file-export" scale="1.2" /> 匯出加密 Excel</button>
+          <button class="encrypted-btn" @click="handleEncryptedImport"><v-icon name="file-import" scale="1.2" /> 匯入加密 Excel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 密鑰輸入對話視窗 -->
+    <div v-if="showEncryptedExportKeyDialog" class="encrypted-key-dialog-overlay" @click="closeEncryptedExportKeyDialog">
+      <div class="encrypted-key-dialog-modal" @click.stop>
+        <div class="encrypted-key-dialog-header">
+          <h3>匯出加密 Excel</h3>
+          <button @click="closeEncryptedExportKeyDialog" class="close-btn">
+            <v-icon name="times" scale="1.2" />
+          </button>
+        </div>
+        <div class="encrypted-key-dialog-content">
+          <label for="exportKey">請輸入加密密鑰：</label>
+          <input id="exportKey" v-model="encryptedExportKey" type="password" class="key-input" placeholder="請輸入至少 6 位密鑰" />
+          <label for="exportKeyConfirm">請再次輸入密鑰：</label>
+          <input id="exportKeyConfirm" v-model="encryptedExportKeyConfirm" type="password" class="key-input" placeholder="請再次輸入密鑰" />
+          <div v-if="encryptedExportKeyError" class="key-error">{{ encryptedExportKeyError }}</div>
+          <button class="encrypted-btn" :disabled="isExportingEncrypted" @click="confirmEncryptedExport">
+            <v-icon name="file-export" scale="1.2" />
+            <span v-if="!isExportingEncrypted">確定匯出</span>
+            <span v-else>匯出中...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加密匯入對話視窗 -->
+    <div v-if="showEncryptedImportKeyDialog" class="encrypted-key-dialog-overlay" @click="closeEncryptedImportKeyDialog">
+      <div class="encrypted-key-dialog-modal" @click.stop>
+        <div class="encrypted-key-dialog-header">
+          <h3>匯入加密 Excel</h3>
+          <button @click="closeEncryptedImportKeyDialog" class="close-btn">
+            <v-icon name="times" scale="1.2" />
+          </button>
+        </div>
+        <div class="encrypted-key-dialog-content">
+          <label>請選擇加密檔案：</label>
+          <button class="file-select-btn" @click="selectEncryptedFile">
+            <v-icon name="folder-open" scale="1" />
+            {{ selectedEncryptedFile ? selectedEncryptedFile.name : '選擇檔案' }}
+          </button>
+          <label for="importKey">請輸入解密密鑰：</label>
+          <input id="importKey" v-model="encryptedImportKey" type="password" class="key-input" placeholder="請輸入解密密鑰" />
+          <div v-if="encryptedImportKeyError" class="key-error">{{ encryptedImportKeyError }}</div>
+          <button class="encrypted-btn" :disabled="isImportingEncrypted" @click="confirmEncryptedImport">
+            <v-icon name="file-import" scale="1.2" />
+            <span v-if="!isImportingEncrypted">確定匯入</span>
+            <span v-else>匯入中...</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -459,7 +527,18 @@ export default {
       viewMode: localStorage.getItem('todoViewMode') || 'card', // 'card' 或 'list'
       // 待辦事項詳情對話視窗狀態
       showTodoDetailDialog: false,
-      selectedTodoForDetail: null
+      selectedTodoForDetail: null,
+      showEncryptedTransferDialog: false,
+      showEncryptedExportKeyDialog: false,
+      encryptedExportKey: '',
+      encryptedExportKeyConfirm: '',
+      encryptedExportKeyError: '',
+      isExportingEncrypted: false,
+      showEncryptedImportKeyDialog: false,
+      encryptedImportKey: '',
+      encryptedImportKeyError: '',
+      isImportingEncrypted: false,
+      selectedEncryptedFile: null
     }
   },
   computed: {
@@ -1123,6 +1202,242 @@ export default {
     closeTodoDetailDialog () {
       this.showTodoDetailDialog = false
       this.selectedTodoForDetail = null
+    },
+
+    handleEncryptedTransfer () {
+      this.showEncryptedTransferDialog = true
+    },
+    closeEncryptedTransferDialog () {
+      this.showEncryptedTransferDialog = false
+    },
+    handleEncryptedExport () {
+      this.showEncryptedTransferDialog = false
+      this.encryptedExportKey = ''
+      this.encryptedExportKeyConfirm = ''
+      this.encryptedExportKeyError = ''
+      this.showEncryptedExportKeyDialog = true
+    },
+    closeEncryptedExportKeyDialog () {
+      this.showEncryptedExportKeyDialog = false
+      this.encryptedExportKey = ''
+      this.encryptedExportKeyConfirm = ''
+      this.encryptedExportKeyError = ''
+    },
+    async confirmEncryptedExport () {
+      if (!this.encryptedExportKey || this.encryptedExportKey.length < 6) {
+        this.encryptedExportKeyError = '密鑰長度至少 6 位'
+        return
+      }
+      if (this.encryptedExportKey !== this.encryptedExportKeyConfirm) {
+        this.encryptedExportKeyError = '兩次輸入的密鑰不一致'
+        return
+      }
+      this.encryptedExportKeyError = ''
+      this.isExportingEncrypted = true
+      try {
+        // 1. 生成 Excel ArrayBuffer
+        const todos = [...this.$store.state.todos.todos].sort((a, b) => b.id - a.id).sort((a, b) => new Date(b.date) - new Date(a.date))
+        const excelData = todos.map((todo, index) => [
+          index + 1,
+          todo.date,
+          todo.name,
+          todo.content || '',
+          todo.time || '',
+          todo.location || '',
+          todo.remarks || '',
+          todo.tag || '',
+          todo.isCompleted ? '已完成' : '未完成',
+          todo.isLater ? '晚點再說' : '列入排程'
+        ])
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.aoa_to_sheet([
+          ['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '標籤', '狀態', '處理時機'],
+          ...excelData
+        ])
+        const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10, 12]
+        ws['!cols'] = colWidths.map((width) => ({ width }))
+        XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+        // 2. 加密 ArrayBuffer
+        const encryptedBuffer = await this.encryptArrayBufferWithPassword(excelBuffer, this.encryptedExportKey)
+        // 3. 下載加密檔案
+        const fileName = `今日待辦帖_${this.getTaipeiDateString()}_加密.xlsx.aes`
+        const blob = new Blob([encryptedBuffer], { type: 'application/octet-stream' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        this.showEncryptedExportKeyDialog = false
+        alert('加密匯出成功！')
+      } catch (e) {
+        this.encryptedExportKeyError = '加密或匯出失敗：' + e.message
+      } finally {
+        this.isExportingEncrypted = false
+      }
+    },
+    // AES-GCM 加密工具
+    async encryptArrayBufferWithPassword (buffer, password) {
+      const salt = crypto.getRandomValues(new Uint8Array(16))
+      const iv = crypto.getRandomValues(new Uint8Array(12))
+      const enc = new TextEncoder()
+      const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey'])
+      const key = await crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt']
+      )
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, buffer)
+      // 將 salt + iv + ciphertext 合併
+      const result = new Uint8Array(salt.length + iv.length + ciphertext.byteLength)
+      result.set(salt, 0)
+      result.set(iv, salt.length)
+      result.set(new Uint8Array(ciphertext), salt.length + iv.length)
+      return result
+    },
+    handleEncryptedImport () {
+      this.showEncryptedTransferDialog = false
+      this.encryptedImportKey = ''
+      this.encryptedImportKeyError = ''
+      this.selectedEncryptedFile = null
+      this.showEncryptedImportKeyDialog = true
+    },
+    closeEncryptedImportKeyDialog () {
+      this.showEncryptedImportKeyDialog = false
+      this.encryptedImportKey = ''
+      this.encryptedImportKeyError = ''
+      this.selectedEncryptedFile = null
+    },
+    selectEncryptedFile () {
+      const fileInput = document.createElement('input')
+      fileInput.type = 'file'
+      fileInput.accept = '.aes,.xlsx.aes'
+      fileInput.style.display = 'none'
+      fileInput.onchange = (event) => {
+        const file = event.target.files[0]
+        if (file) {
+          this.selectedEncryptedFile = file
+        }
+      }
+      document.body.appendChild(fileInput)
+      fileInput.click()
+      document.body.removeChild(fileInput)
+    },
+    async confirmEncryptedImport () {
+      if (!this.selectedEncryptedFile) {
+        this.encryptedImportKeyError = '請先選擇加密檔案'
+        return
+      }
+      if (!this.encryptedImportKey || this.encryptedImportKey.length < 6) {
+        this.encryptedImportKeyError = '密鑰長度至少 6 位'
+        return
+      }
+      this.encryptedImportKeyError = ''
+      this.isImportingEncrypted = true
+      try {
+        // 1. 讀取加密檔案
+        const arrayBuffer = await this.readFileAsArrayBuffer(this.selectedEncryptedFile)
+        // 2. 解密檔案
+        const decryptedBuffer = await this.decryptArrayBufferWithPassword(arrayBuffer, this.encryptedImportKey)
+        // 3. 處理解密後的 Excel 資料
+        await this.processExcelData(decryptedBuffer)
+        this.showEncryptedImportKeyDialog = false
+        alert('加密檔案匯入成功！')
+      } catch (e) {
+        this.encryptedImportKeyError = '解密失敗：' + e.message
+      } finally {
+        this.isImportingEncrypted = false
+      }
+    },
+    // AES-GCM 解密工具
+    async decryptArrayBufferWithPassword (encryptedBuffer, password) {
+      try {
+        // 提取 salt、IV 和加密資料
+        const salt = encryptedBuffer.slice(0, 16)
+        const iv = encryptedBuffer.slice(16, 28)
+        const ciphertext = encryptedBuffer.slice(28)
+
+        const enc = new TextEncoder()
+        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey'])
+        const key = await crypto.subtle.deriveKey(
+          {
+            name: 'PBKDF2',
+            salt,
+            iterations: 100000,
+            hash: 'SHA-256'
+          },
+          keyMaterial,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['decrypt']
+        )
+
+        const decryptedData = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext)
+        return new Uint8Array(decryptedData)
+      } catch (error) {
+        throw new Error('密鑰錯誤或檔案已損壞')
+      }
+    },
+    // 處理 Excel 資料（重用現有邏輯）
+    async processExcelData (buffer) {
+      const workbook = XLSX.read(buffer, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+
+      // 轉換資料格式
+      const importedTodos = jsonData.slice(1).map((row, index) => {
+        const statusText = row[8] || ''
+        const isCompleted = statusText === '已完成'
+        const timingText = row[9] || ''
+        const isLater = timingText === '晚點再說'
+
+        return {
+          id: Date.now() + (jsonData.length - 1 - index),
+          date: row[1] || this.getTaipeiDateString(),
+          name: row[2] || '',
+          content: row[3] || null,
+          time: row[4] || null,
+          location: row[5] || null,
+          remarks: row[6] || null,
+          tag: row[7] || null,
+          isCompleted: isCompleted,
+          isLater: isLater
+        }
+      })
+
+      // 確認匯入
+      if (confirm(`確定要匯入 ${importedTodos.length} 個待辦事項嗎？這將會覆蓋現有的待辦清單。`)) {
+        this.clearAllData()
+        importedTodos.forEach((todo) => {
+          this.addTodo(todo)
+        })
+        this.$forceUpdate()
+        this.$nextTick(() => {
+          this.checkAllTodoHeights()
+          setTimeout(() => this.checkAllTodoHeights(), 500)
+          setTimeout(() => this.checkAllTodoHeights(), 1000)
+        })
+      }
+    },
+    // 檔案讀取輔助方法
+    readFileAsArrayBuffer (file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => resolve(e.target.result)
+        reader.onerror = reject
+        reader.readAsArrayBuffer(file)
+      })
     }
   },
   mounted () {
@@ -3300,5 +3615,167 @@ export default {
   .todo-title-text {
     font-size: 0.8rem;
   }
+}
+
+.encrypted-transfer-btn {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 5px 0;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  color: #666;
+  margin-left: 0;
+  align-self: flex-start;
+}
+.encrypted-transfer-btn:hover {
+  background: rgba(33, 150, 243, 0.12);
+}
+.encrypted-transfer-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.encrypted-transfer-dialog-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.encrypted-transfer-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+.encrypted-transfer-dialog-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1f2937;
+}
+.encrypted-transfer-dialog-content {
+  padding: 32px 24px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: stretch;
+}
+.encrypted-btn {
+  background: linear-gradient(45deg, #87ceeb, #b0e0e6);
+  border: none;
+  color: white;
+  font-size: 1rem;
+  padding: 16px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.encrypted-btn:hover {
+  background: #5fb4d3;
+}
+
+.encrypted-key-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+.encrypted-key-dialog-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.encrypted-key-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+.encrypted-key-dialog-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1f2937;
+}
+.encrypted-key-dialog-content {
+  padding: 32px 24px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+}
+.key-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+.key-input:focus {
+  outline: none;
+  border-color: #87ceeb;
+  box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.1);
+}
+.key-error {
+  color: #ef4444;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.file-select-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.file-select-btn:hover {
+  border-color: #87ceeb;
+  background: #f0f9ff;
+  color: #87ceeb;
 }
 </style>
