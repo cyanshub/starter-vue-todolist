@@ -13,6 +13,7 @@
           <p>✨ 只要貼上圖片網址，就能在待辦事項中顯示圖片！</p>
           <p>✨ 資料存放在用戶端，只有同一台裝置與瀏覽器才看得見！</p>
           <p>✨ 支援 Excel 匯入/匯出、自定義標籤、Demo 重置等功能！</p>
+          <p>✨ 支援加密 Excel 傳輸，讓你的待辦事項更安全！</p>
         </div>
       </div>
       <button @click="showAddForm = true" class="add-btn">
@@ -454,15 +455,24 @@
         </div>
         <div class="encrypted-key-dialog-content">
           <label for="exportKey">請輸入加密密鑰：</label>
-          <input id="exportKey" v-model="encryptedExportKey" type="password" class="key-input" placeholder="請輸入至少 6 位密鑰" />
+          <input id="exportKey" v-model="encryptedExportKey" type="password" class="key-input" placeholder="請輸入密鑰" />
           <label for="exportKeyConfirm">請再次輸入密鑰：</label>
           <input id="exportKeyConfirm" v-model="encryptedExportKeyConfirm" type="password" class="key-input" placeholder="請再次輸入密鑰" />
+          <label for="emailTo">收件人 Email：</label>
+          <input id="emailTo" v-model="emailTo" type="email" class="key-input" placeholder="請輸入收件人 Email" />
           <div v-if="encryptedExportKeyError" class="key-error">{{ encryptedExportKeyError }}</div>
-          <button class="encrypted-btn" :disabled="isExportingEncrypted" @click="confirmEncryptedExport">
-            <v-icon name="file-export" scale="1.2" />
-            <span v-if="!isExportingEncrypted">確定匯出</span>
-            <span v-else>匯出中...</span>
-          </button>
+          <div class="export-options">
+            <button class="encrypted-btn" :disabled="isExportingEncrypted" @click="confirmEncryptedExport">
+              <v-icon name="download" scale="1.2" />
+              <span v-if="!isExportingEncrypted">下載到設備</span>
+              <span v-else>下載中...</span>
+            </button>
+            <button class="encrypted-btn email-btn" :disabled="isExportingEncrypted || !emailTo" @click="sendEncryptedFileToEmail">
+              <v-icon name="envelope" scale="1.2" />
+              <span v-if="!isExportingEncrypted">發送到 Email</span>
+              <span v-else>發送中...</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -500,6 +510,7 @@
 import { mapGetters, mapActions } from 'vuex'
 import TodoForm from '../components/TodoForm.vue'
 import * as XLSX from 'xlsx'
+import { sendEncryptedTodosEmail } from '../api/todo.js'
 
 export default {
   name: 'TodoList',
@@ -534,6 +545,7 @@ export default {
       encryptedExportKeyConfirm: '',
       encryptedExportKeyError: '',
       isExportingEncrypted: false,
+      emailTo: '', // 新增收件人 Email
       showEncryptedImportKeyDialog: false,
       encryptedImportKey: '',
       encryptedImportKeyError: '',
@@ -721,6 +733,33 @@ export default {
       const imageApiPattern = /\/images?(\?|#|$)/i
       // 逐一替換網址
       return content.replace(urlRegex, (url) => {
+        // 過濾掉有問題的外部圖片 URL
+        if (
+          url.includes('fbcdn.net') ||
+          url.includes('facebook.com') ||
+          url.includes('scontent-tpe1-1.xx') ||
+          url.includes('514592136_1142965291207488_6293065648381434818_n')
+        ) {
+          // 將有問題的 URL 轉換為純文字連結，不載入圖片
+          const displayText = url.length > 42 ? url.substring(0, 42) + '...' : url
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer"
+            style="
+              color: #dc2626;
+              text-decoration: none;
+              transition: all 0.3s ease;
+              white-space: nowrap;
+              font-style: italic;
+            "
+            onmouseover="this.style.color='#991b1b'; this.style.textDecoration='underline';"
+            onmouseout="this.style.color='#dc2626'; this.style.textDecoration='none';"
+            onfocus="this.style.outline='2px solid #fecaca';"
+            onblur="this.style.outline='none';"
+            onmousedown="this.style.color='#7f1d1d';"
+            onmouseup="this.style.color='#991b1b';"
+            title="${url} (外部資源，可能無法載入)"
+          >${displayText}</a>`
+        }
+
         if ((imageExtensions.test(url) || imageApiPattern.test(url)) && allowImages) {
           // 轉為圖片
           return `<img src="${url}" alt="圖片" style="
@@ -1222,10 +1261,11 @@ export default {
       this.encryptedExportKey = ''
       this.encryptedExportKeyConfirm = ''
       this.encryptedExportKeyError = ''
+      this.emailTo = '' // 清空 Email
     },
     async confirmEncryptedExport () {
-      if (!this.encryptedExportKey || this.encryptedExportKey.length < 6) {
-        this.encryptedExportKeyError = '密鑰長度至少 6 位'
+      if (!this.encryptedExportKey || this.encryptedExportKey.length < 1 || this.encryptedExportKey.trim() === '') {
+        this.encryptedExportKeyError = '請輸入密鑰'
         return
       }
       if (this.encryptedExportKey !== this.encryptedExportKeyConfirm) {
@@ -1338,10 +1378,6 @@ export default {
         this.encryptedImportKeyError = '請先選擇加密檔案'
         return
       }
-      if (!this.encryptedImportKey || this.encryptedImportKey.length < 6) {
-        this.encryptedImportKeyError = '密鑰長度至少 6 位'
-        return
-      }
       this.encryptedImportKeyError = ''
       this.isImportingEncrypted = true
       try {
@@ -1438,6 +1474,78 @@ export default {
         reader.onerror = reject
         reader.readAsArrayBuffer(file)
       })
+    },
+    sendEncryptedFileToEmail () {
+      // 驗證密鑰
+      if (!this.encryptedExportKey || this.encryptedExportKey.length < 1 || this.encryptedExportKey.trim() === '') {
+        this.encryptedExportKeyError = '請輸入密鑰'
+        return
+      }
+      if (this.encryptedExportKey !== this.encryptedExportKeyConfirm) {
+        this.encryptedExportKeyError = '兩次輸入的密鑰不一致'
+        return
+      }
+      if (!this.emailTo) {
+        this.encryptedExportKeyError = '請輸入收件人 Email'
+        return
+      }
+
+      // 驗證 Email 格式
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(this.emailTo)) {
+        this.encryptedExportKeyError = 'Email 格式不正確'
+        return
+      }
+
+      this.encryptedExportKeyError = ''
+      this.isExportingEncrypted = true
+
+      // 使用 async/await 處理
+      this.handleEncryptedEmailSend()
+    },
+
+    async handleEncryptedEmailSend () {
+      try {
+        // 1. 生成 Excel ArrayBuffer
+        const todos = [...this.$store.state.todos.todos].sort((a, b) => b.id - a.id).sort((a, b) => new Date(b.date) - new Date(a.date))
+        const excelData = todos.map((todo, index) => [
+          index + 1,
+          todo.date,
+          todo.name,
+          todo.content || '',
+          todo.time || '',
+          todo.location || '',
+          todo.remarks || '',
+          todo.tag || '',
+          todo.isCompleted ? '已完成' : '未完成',
+          todo.isLater ? '晚點再說' : '列入排程'
+        ])
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.aoa_to_sheet([
+          ['序號', '日期', '標題', '內容', '所需時間', '地點', '備註', '標籤', '狀態', '處理時機'],
+          ...excelData
+        ])
+        const colWidths = [8, 12, 20, 30, 12, 15, 20, 15, 10, 12]
+        ws['!cols'] = colWidths.map((width) => ({ width }))
+        XLSX.utils.book_append_sheet(wb, ws, '待辦清單')
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+
+        // 2. 加密 ArrayBuffer
+        const encryptedBuffer = await this.encryptArrayBufferWithPassword(excelBuffer, this.encryptedExportKey)
+
+        // 3. 發送到後端
+        const fileName = `今日待辦帖_${this.getTaipeiDateString()}_加密.xlsx.aes`
+        const encryptedFile = new Blob([encryptedBuffer], { type: 'application/octet-stream' })
+
+        await sendEncryptedTodosEmail(encryptedFile, this.emailTo, fileName)
+
+        this.showEncryptedExportKeyDialog = false
+        alert('加密檔案已成功發送到指定 Email！')
+      } catch (e) {
+        this.encryptedExportKeyError = '發送失敗：' + e.message
+      } finally {
+        this.isExportingEncrypted = false
+      }
     }
   },
   mounted () {
@@ -3777,5 +3885,21 @@ export default {
   border-color: #87ceeb;
   background: #f0f9ff;
   color: #87ceeb;
+}
+
+/* 新增的樣式 */
+.export-options {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.export-options .encrypted-btn {
+  flex: 1;
+}
+
+.email-btn:disabled {
+  background: #6b7280 !important;
+  cursor: not-allowed;
 }
 </style>
